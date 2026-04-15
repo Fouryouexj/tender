@@ -1,0 +1,1152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IMOTH Tenders Tracker</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --primary:#185fa5;--primary-light:#e6f1fb;--primary-dark:#0c447c;
+  --red:#e24b4a;--red-bg:#fcebeb;--red-border:#f7c1c1;
+  --orange:#ba7517;--orange-bg:#faeeda;
+  --yellow:#856400;--yellow-bg:#fef9e0;
+  --green:#3b6d11;--green-bg:#eaf3de;
+  --gray:#5f5e5a;--gray-bg:#f1efe8;
+  --border:#d3d1c7;--border-light:#ebebeb;
+  --bg:#f5f5f3;--surface:#fff;
+  --text:#1a1a1a;--text-muted:#888780;--text-faint:#b4b2a9;
+  --radius:8px;--radius-lg:12px;--radius-xl:16px;
+  --shadow:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
+  --shadow-md:0 4px 12px rgba(0,0,0,.08),0 2px 4px rgba(0,0,0,.04);
+}
+
+body{font-family:system-ui,-apple-system,sans-serif;font-size:14px;background:var(--bg);color:var(--text);min-height:100vh}
+
+/* ── LOGIN ── */
+#loginScreen{display:none;position:fixed;inset:0;background:var(--bg);z-index:999;align-items:center;justify-content:center;flex-direction:column}
+#loginScreen.show{display:flex}
+.login-wrap{width:100%;max-width:420px;padding:16px}
+.login-card{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius-xl);padding:40px;box-shadow:var(--shadow-md)}
+.login-brand{display:flex;align-items:center;gap:12px;margin-bottom:32px}
+.brand-mark{width:42px;height:42px;border-radius:10px;background:var(--primary);color:#fff;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;letter-spacing:-.5px}
+.brand-name{font-size:15px;font-weight:600;line-height:1.2}
+.brand-sub{font-size:11px;color:var(--text-muted);margin-top:2px}
+.login-title{font-size:22px;font-weight:600;margin-bottom:6px}
+.login-desc{font-size:13px;color:var(--text-muted);margin-bottom:28px;line-height:1.5}
+.field{margin-bottom:16px}
+.field label{display:block;font-size:12px;font-weight:500;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px}
+.field input{width:100%;border:1px solid var(--border);border-radius:var(--radius);padding:10px 13px;font-size:14px;outline:none;color:var(--text);font-family:inherit;background:var(--surface);transition:border-color .15s,box-shadow .15s}
+.field input:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-light)}
+.login-btn{width:100%;background:var(--primary);color:#fff;border:none;border-radius:var(--radius);padding:11px;font-size:14px;font-weight:500;cursor:pointer;margin-top:4px;font-family:inherit;transition:background .15s,transform .1s}
+.login-btn:hover{background:var(--primary-dark)}
+.login-btn:active{transform:scale(.98)}
+.login-btn:disabled{opacity:.6;cursor:not-allowed}
+.login-error{background:var(--red-bg);color:var(--red);border:1px solid var(--red-border);border-radius:var(--radius);padding:9px 13px;font-size:13px;margin-bottom:16px;display:none}
+.login-error.show{display:block}
+.login-footer{font-size:11px;color:var(--text-faint);text-align:center;margin-top:24px}
+.login-divider{border:none;border-top:1px solid var(--border-light);margin:24px 0}
+
+/* ── TOP BAR ── */
+#appHeader{background:var(--surface);border-bottom:0.5px solid var(--border);padding:0 24px;height:56px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:20;box-shadow:var(--shadow)}
+.header-brand{display:flex;align-items:center;gap:10px}
+.header-mark{width:32px;height:32px;border-radius:8px;background:var(--primary);color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.header-title{font-size:15px;font-weight:600}
+.header-sub{font-size:11px;color:var(--text-muted);margin-top:1px}
+.live-dot{width:7px;height:7px;border-radius:50%;background:#3b6d11;display:inline-block;margin-right:4px;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.header-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+.last-saved{font-size:11px;color:var(--text-faint)}
+.nav-tabs{display:flex;gap:2px;background:var(--bg);border-radius:var(--radius);padding:3px;border:0.5px solid var(--border)}
+.nav-tab{padding:5px 14px;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;border:none;background:transparent;color:var(--text-muted);transition:all .15s}
+.nav-tab.active{background:var(--surface);color:var(--text);box-shadow:var(--shadow)}
+.nav-tab:hover:not(.active){color:var(--text)}
+
+/* ── STATS BAR ── */
+.stats-bar{background:var(--surface);border-bottom:0.5px solid var(--border);padding:14px 24px;display:flex;gap:10px;flex-wrap:wrap;flex-shrink:0}
+.stat-card{background:var(--bg);border-radius:var(--radius);padding:10px 16px;min-width:110px;flex:1;border:0.5px solid var(--border-light)}
+.stat-val{font-size:24px;font-weight:600;line-height:1}
+.stat-lbl{font-size:10px;color:var(--text-muted);margin-top:3px;text-transform:uppercase;letter-spacing:.5px}
+.stat-card.c-red .stat-val{color:var(--red)}
+.stat-card.c-orange .stat-val{color:var(--orange)}
+.stat-card.c-green .stat-val{color:var(--green)}
+.stat-card.c-blue .stat-val{color:var(--primary)}
+
+/* ── CONTROLS ── */
+.controls{padding:12px 24px;background:var(--surface);border-bottom:0.5px solid var(--border);display:flex;gap:8px;flex-wrap:wrap;align-items:center;flex-shrink:0}
+.search-wrap{position:relative;flex:1;min-width:200px}
+.search-wrap svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text-faint);pointer-events:none}
+.search-wrap input{width:100%;border:1px solid var(--border);border-radius:var(--radius);padding:7px 12px 7px 34px;font-size:13px;outline:none;color:var(--text);background:var(--surface)}
+.search-wrap input:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-light)}
+.filter-select{border:1px solid var(--border);border-radius:var(--radius);padding:7px 10px;font-size:13px;background:var(--surface);color:var(--text);outline:none;cursor:pointer}
+.filter-select:focus{border-color:var(--primary)}
+.btn{border:0.5px solid var(--border);border-radius:var(--radius);padding:7px 13px;font-size:13px;background:var(--surface);color:var(--text);cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:5px;transition:background .12s,border-color .12s}
+.btn:hover{background:var(--bg);border-color:#c0beb4}
+.btn.primary{background:var(--primary);color:#fff;border-color:var(--primary)}
+.btn.primary:hover{background:var(--primary-dark)}
+.btn.danger{background:var(--red-bg);color:var(--red);border-color:var(--red-border)}
+.btn.danger:hover{background:#f7c1c1}
+.btn svg{flex-shrink:0}
+.controls-right{margin-left:auto;display:flex;gap:8px;align-items:center}
+.count-badge{font-size:12px;color:var(--text-muted);padding:4px 10px;background:var(--bg);border-radius:20px;border:0.5px solid var(--border)}
+
+/* ── TABLE ── */
+.table-wrap{overflow-x:auto;overflow-y:auto;background:var(--surface);flex:1;min-height:0}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{background:var(--bg);padding:10px 12px;text-align:left;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);border-bottom:0.5px solid var(--border);white-space:nowrap;position:sticky;top:0;z-index:2}
+thead th.sortable{cursor:pointer;user-select:none}
+thead th.sortable:hover{color:var(--text)}
+tbody tr{border-bottom:0.5px solid var(--border-light);transition:background .1s}
+tbody tr:hover{background:#fafaf9}
+tbody td{padding:9px 12px;vertical-align:middle}
+.td-num{text-align:right;color:var(--text-faint);font-size:11px;width:36px}
+.td-actions{width:40px}
+
+/* ── BADGES ── */
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:500;white-space:nowrap;line-height:1.4}
+.badge.urgent{background:var(--red-bg);color:var(--red)}
+.badge.soon{background:var(--orange-bg);color:var(--orange)}
+.badge.upcoming{background:var(--yellow-bg);color:var(--yellow)}
+.badge.ok{background:var(--green-bg);color:var(--green)}
+.badge.expired{background:var(--gray-bg);color:var(--gray)}
+.badge.cat{background:var(--primary-light);color:var(--primary);font-size:10px;padding:2px 7px}
+
+/* ── INLINE EDIT ── */
+.edit-cell input,.edit-cell select{width:100%;min-width:100px;border:1px solid transparent;border-radius:5px;padding:4px 7px;font-size:12px;background:transparent;color:var(--text);outline:none;cursor:pointer;font-family:inherit}
+.edit-cell input:hover,.edit-cell select:hover{border-color:var(--border);background:var(--surface)}
+.edit-cell input:focus,.edit-cell select:focus{border-color:var(--primary);background:var(--surface);box-shadow:0 0 0 2px var(--primary-light)}
+.notes-input{width:100%;min-width:130px;border:1px solid transparent;border-radius:5px;padding:4px 7px;font-size:12px;background:transparent;color:var(--text);outline:none;cursor:pointer;font-family:inherit}
+.notes-input:hover{border-color:var(--border);background:var(--surface)}
+.notes-input:focus{border-color:var(--primary);background:var(--surface)}
+.pe-name{font-weight:500;max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.title-cell{max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#444;cursor:help}
+.row-expired{opacity:.55}
+
+/* ── USER CHIP ── */
+.user-chip{display:flex;align-items:center;gap:8px;background:var(--bg);border:0.5px solid var(--border);border-radius:20px;padding:5px 12px 5px 6px;cursor:default}
+.user-avatar{width:26px;height:26px;border-radius:50%;background:var(--primary);color:#fff;font-size:10px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.user-info{line-height:1.3}
+.user-name{font-size:12px;font-weight:500}
+.user-role-lbl{font-size:10px;color:var(--text-muted)}
+.logout-btn{background:none;border:0.5px solid var(--border);border-radius:5px;padding:3px 8px;font-size:11px;color:var(--text-muted);cursor:pointer;margin-left:2px}
+.logout-btn:hover{background:var(--red-bg);color:var(--red);border-color:var(--red-border)}
+
+/* ── ADMIN PANEL ── */
+.admin-bar{background:var(--primary-light);border-bottom:0.5px solid #b5d4f4;padding:12px 24px;display:none;flex-direction:column;gap:8px}
+.admin-bar.show{display:flex}
+.admin-bar-header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.admin-bar-label{font-size:11px;font-weight:600;color:var(--primary);text-transform:uppercase;letter-spacing:.4px}
+.admin-bar-actions{display:flex;gap:8px;align-items:center}
+
+/* Team members list (improved) */
+.user-tags{display:flex;flex-direction:column;gap:0;background:var(--surface);border:0.5px solid #b5d4f4;border-radius:6px;overflow:hidden;max-height:150px;overflow-y:auto;margin:4px 0}
+.user-tag{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:0.5px solid #ebebeb;font-size:13px;gap:12px}
+.user-tag:last-child{border-bottom:none}
+.user-tag:hover{background:var(--bg)}
+.user-tag-info{display:flex;align-items:center;gap:8px;flex:1;min-width:0}
+.user-avatar{width:32px;height:32px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;flex-shrink:0}
+.user-details{display:flex;flex-direction:column;gap:1px;min-width:0;flex:1}
+.user-name{font-size:13px;font-weight:500;color:var(--text)}
+.user-email{font-size:11px;color:var(--text-muted);text-overflow:ellipsis;white-space:nowrap;overflow:hidden}
+.user-tag-actions{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.role-pill{font-size:10px;padding:2px 6px;border-radius:3px;font-weight:600;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap}
+.role-pill.admin{background:var(--primary-light);color:var(--primary)}
+.role-pill.user{background:var(--green-bg);color:var(--green)}
+.del-user-btn{background:none;border:none;color:var(--text-faint);cursor:pointer;font-size:14px;line-height:1;padding:2px 4px;display:flex;align-items:center;transition:color .15s}
+.del-user-btn:hover{color:var(--red)}
+
+/* ── FOOTER ── */
+.app-footer{background:var(--surface);border-top:0.5px solid var(--border);padding:10px 24px;display:flex;align-items:center;gap:12px;font-size:11px;color:var(--text-muted);flex-shrink:0}
+.legend{display:flex;gap:14px;flex-wrap:wrap}
+.legend-item{display:flex;align-items:center;gap:5px}
+.dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:24px;right:24px;background:#1a1a1a;color:#fff;padding:10px 18px;border-radius:var(--radius);font-size:13px;z-index:9999;opacity:0;transition:opacity .25s,transform .25s;transform:translateY(8px);pointer-events:none;display:flex;align-items:center;gap:8px}
+.toast.show{opacity:1;transform:translateY(0)}
+.toast.success{background:#27500a}
+.toast.error{background:#791f1f}
+
+/* ── VIEWS ── */
+.view{display:none}
+.view.active{display:flex;flex-direction:column;height:calc(100vh - 56px);overflow:hidden}
+
+/* ── AUDIT LOG ── */
+.audit-wrap{padding:24px;max-width:900px;margin:0 auto;overflow-y:auto;flex:1;min-height:0}
+.audit-header{margin-bottom:20px}
+.audit-header h2{font-size:18px;font-weight:600;margin-bottom:4px}
+.audit-header p{font-size:13px;color:var(--text-muted)}
+.audit-list{display:flex;flex-direction:column;gap:8px}
+.audit-item{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:14px 16px;display:flex;gap:14px;align-items:flex-start}
+.audit-icon{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:14px}
+.audit-icon.created{background:var(--green-bg)}
+.audit-icon.updated{background:var(--primary-light)}
+.audit-icon.deleted{background:var(--red-bg)}
+.audit-body{flex:1;min-width:0}
+.audit-top{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:4px}
+.audit-action{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.4px}
+.audit-action.created{color:var(--green)}
+.audit-action.updated{color:var(--primary)}
+.audit-action.deleted{color:var(--red)}
+.audit-who{font-size:13px;font-weight:500}
+.audit-when{font-size:11px;color:var(--text-faint);margin-left:auto}
+.audit-pe{font-size:13px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.audit-changes{margin-top:8px;display:flex;flex-direction:column;gap:4px}
+.change-row{display:flex;gap:8px;align-items:baseline;font-size:12px}
+.change-field{font-weight:500;color:var(--text-muted);min-width:80px;flex-shrink:0}
+.change-old{color:var(--red);text-decoration:line-through;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.change-arrow{color:var(--text-faint)}
+.change-new{color:var(--green);max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.audit-empty{text-align:center;padding:60px 20px;color:var(--text-muted)}
+.audit-empty-icon{font-size:32px;margin-bottom:12px}
+.loading-state{text-align:center;padding:60px 20px;color:var(--text-muted)}
+.spinner{width:24px;height:24px;border:2px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin .7s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── MODAL ── */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:50;align-items:center;justify-content:center;padding:16px}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border-radius:var(--radius-xl);padding:28px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-md)}
+.modal-header{margin-bottom:20px}
+.modal-title{font-size:17px;font-weight:600}
+.modal-sub{font-size:12px;color:var(--text-muted);margin-top:3px}
+.modal-field{margin-bottom:14px}
+.modal-field label{display:block;font-size:12px;font-weight:500;color:var(--text-muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.3px}
+.modal-field input,.modal-field select,.modal-field textarea{width:100%;border:1px solid var(--border);border-radius:var(--radius);padding:9px 11px;font-size:13px;outline:none;font-family:inherit;color:var(--text);background:var(--surface)}
+.modal-field input:focus,.modal-field select:focus,.modal-field textarea:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-light)}
+.modal-field textarea{min-height:72px;resize:vertical;line-height:1.5}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:0.5px solid var(--border-light)}
+.modal-divider{border:none;border-top:0.5px solid var(--border-light);margin:16px 0}
+
+/* ── RESPONSIVE ── */
+@media(max-width:640px){
+  .stats-bar{gap:6px}
+  .stat-card{min-width:80px;padding:8px 10px}
+  .stat-val{font-size:20px}
+  .controls{flex-direction:column;align-items:stretch}
+  .controls-right{margin-left:0}
+  .count-badge{display:none}
+  #appHeader{padding:0 16px}
+  .header-sub{display:none}
+  .audit-wrap{padding:16px}
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div class="login-wrap">
+    <div class="login-card">
+      <div class="login-brand">
+        <div class="brand-mark">IM</div>
+        <div>
+          <div class="brand-name">IMOTH Insurance Brokers</div>
+          <div class="brand-sub">Tenders Management System</div>
+        </div>
+      </div>
+      <h2 class="login-title">Welcome back</h2>
+      <p class="login-desc">Sign in to access the tenders tracker.</p>
+      <div class="login-error" id="loginError"></div>
+      <div class="field"><label>Email address</label><input type="email" id="loginEmail" placeholder="you@imoth.co.ke" autocomplete="username" onkeydown="if(event.key==='Enter')doLogin()"></div>
+      <div class="field"><label>Password</label><input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"></div>
+      <button class="login-btn" id="loginBtn" onclick="doLogin()">Sign in</button>
+      <div class="login-footer">IMOTH Insurance Brokers Limited &bull; Nairobi, Kenya</div>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" style="display:none">
+
+  <!-- HEADER -->
+  <div id="appHeader">
+    <div class="header-brand">
+      <div class="header-mark">IM</div>
+      <div>
+        <div class="header-title">IMOTH Tenders Tracker</div>
+        <div class="header-sub">Kenya Public Procurement</div>
+      </div>
+    </div>
+    <div class="nav-tabs" style="margin-left:16px">
+      <button class="nav-tab active" onclick="switchView('tenders',this)">Tenders</button>
+      <button class="nav-tab" onclick="switchView('audit',this)">Audit Log</button>
+    </div>
+    <div class="header-right">
+      <span class="last-saved" id="liveStatus"><span class="live-dot"></span>Live</span>
+      <span class="last-saved" id="lastSaved"></span>
+      <div class="user-chip" id="userChip" style="display:none">
+        <div class="user-avatar" id="userAvatar"></div>
+        <div class="user-info">
+          <div class="user-name" id="userName"></div>
+          <div class="user-role-lbl" id="userRoleLbl"></div>
+        </div>
+        <button class="logout-btn" onclick="doLogout()">Sign out</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADMIN BAR -->
+  <div class="admin-bar" id="adminBar">
+    <div class="admin-bar-header">
+      <span class="admin-bar-label">👥 Team Members</span>
+      <button class="btn" onclick="openAddUserModal()" style="padding:4px 10px;font-size:12px">+ Add</button>
+    </div>
+    <div class="user-tags" id="userTagList"></div>
+  </div>
+
+  <!-- ADD USER MODAL -->
+  <div class="modal-overlay" id="userModal" onclick="if(event.target===this)closeUserModal()">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title">Add team member</div>
+        <div class="modal-sub">Creates their account. They can sign in immediately.</div>
+      </div>
+      <div id="userModalError" style="display:none;background:var(--red-bg);color:var(--red);border:1px solid var(--red-border);border-radius:var(--radius);padding:9px 13px;font-size:13px;margin-bottom:14px"></div>
+      <div class="modal-field"><label>Full name</label><input type="text" id="nu_name" placeholder="e.g. Jane Wanjiku"></div>
+      <div class="modal-field"><label>Email address</label><input type="email" id="nu_email" placeholder="e.g. jane@imoth.co.ke"></div>
+      <div class="modal-field"><label>Password</label><input type="password" id="nu_pass" placeholder="Min 6 characters"></div>
+      <div class="modal-field"><label>Confirm password</label><input type="password" id="nu_pass2" placeholder="Repeat password"></div>
+      <div class="modal-field"><label>Role</label>
+        <select id="nu_role">
+          <option value="user">Marketer — view and edit tenders</option>
+          <option value="admin">Admin — also manage users</option>
+        </select>
+      </div>
+      <div class="modal-actions">
+        <button class="btn" onclick="closeUserModal()">Cancel</button>
+        <button class="btn primary" id="btnAddUser" onclick="saveNewUser()">Add user</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TENDERS VIEW -->
+  <div id="view-tenders" class="view active">
+    <div class="stats-bar">
+      <div class="stat-card c-red"><div class="stat-val" id="sUrgent">—</div><div class="stat-lbl">Urgent ≤14d</div></div>
+      <div class="stat-card c-orange"><div class="stat-val" id="sSoon">—</div><div class="stat-lbl">Soon 15–30d</div></div>
+      <div class="stat-card"><div class="stat-val" id="sUpcoming">—</div><div class="stat-lbl">Upcoming 31–60d</div></div>
+      <div class="stat-card c-green"><div class="stat-val" id="sOk">—</div><div class="stat-lbl">Future 60d+</div></div>
+      <div class="stat-card"><div class="stat-val" id="sTotal">—</div><div class="stat-lbl">Total active</div></div>
+      <div class="stat-card c-blue"><div class="stat-val" id="sAssigned">—</div><div class="stat-lbl">Assigned</div></div>
+    </div>
+
+    <div class="controls">
+      <div class="search-wrap">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="6.5" cy="6.5" r="5.5" stroke="currentColor" stroke-width="1.5"/><path d="M12 12l2.5 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <input type="text" id="search" placeholder="Search tender title, PE name..." oninput="renderTable()">
+      </div>
+      <select class="filter-select" id="filterCat" onchange="renderTable()">
+        <option value="">All categories</option>
+        <option>Medical/Health</option><option>Motor Vehicle</option>
+        <option>Life/GPA/WIBA</option><option>Property/Assets</option>
+        <option>Comprehensive/Other</option>
+      </select>
+      <select class="filter-select" id="filterUrgency" onchange="renderTable()">
+        <option value="">All urgency</option>
+        <option value="expired">Expired</option><option value="urgent">Urgent ≤14d</option>
+        <option value="soon">Soon 15–30d</option><option value="upcoming">Upcoming 31–60d</option>
+        <option value="ok">Future 60d+</option>
+      </select>
+      <select class="filter-select" id="filterMarketer" onchange="renderTable()">
+        <option value="">All marketers</option>
+        <option value="unassigned">Unassigned</option>
+      </select>
+      <select class="filter-select" id="filterStatus" onchange="renderTable()">
+        <option value="">All statuses</option>
+        <option>Watch</option><option>Identified</option><option>Qualified</option>
+        <option>Preparing</option><option>Submitted</option><option>Won</option>
+        <option>Lost</option><option>Withdrawn</option>
+      </select>
+      <div class="controls-right">
+        <span class="count-badge" id="countBadge"></span>
+        <button class="btn" onclick="clearFilters()">Clear</button>
+        <button class="btn" onclick="weeklyRefresh()">Refresh days</button>
+        <button class="btn" onclick="exportCSV()">Export CSV</button>
+        <button class="btn primary" onclick="openAddModal()">+ Add tender</button>
+      </div>
+    </div>
+
+    <div class="table-wrap" id="tableWrap">
+      <div class="loading-state"><div class="spinner"></div><br><br>Loading tenders…</div>
+    </div>
+
+    <div class="app-footer">
+      <div class="legend">
+        <div class="legend-item"><div class="dot" style="background:var(--red)"></div>Urgent ≤14d</div>
+        <div class="legend-item"><div class="dot" style="background:#ef9f27"></div>Soon 15–30d</div>
+        <div class="legend-item"><div class="dot" style="background:#eac600"></div>Upcoming 31–60d</div>
+        <div class="legend-item"><div class="dot" style="background:#639922"></div>Future 60d+</div>
+        <div class="legend-item"><div class="dot" style="background:var(--text-faint)"></div>Expired</div>
+      </div>
+      <span style="margin-left:auto">Click Marketer, Status or Notes cells to edit inline</span>
+    </div>
+  </div>
+
+  <!-- AUDIT VIEW -->
+  <div id="view-audit" class="view">
+    <div class="audit-wrap">
+      <div class="audit-header">
+        <h2>Audit log</h2>
+        <p>A record of all changes made to tenders — who did what and when.</p>
+      </div>
+      <div id="auditList"><div class="loading-state"><div class="spinner"></div><br><br>Loading audit log…</div></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- TENDER MODAL -->
+<div class="modal-overlay" id="tenderModal" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle">Add tender</div>
+      <div class="modal-sub" id="modalSub">Fill in the details to track a new tender.</div>
+    </div>
+    <div class="modal-field"><label>Procuring entity (PE name)</label><input type="text" id="f_peName"></div>
+    <div class="modal-field"><label>Tender title / description</label><textarea id="f_title"></textarea></div>
+    <div class="modal-field"><label>Category</label>
+      <select id="f_category">
+        <option>Medical/Health</option><option>Motor Vehicle</option>
+        <option>Life/GPA/WIBA</option><option>Property/Assets</option>
+        <option>Comprehensive/Other</option>
+      </select>
+    </div>
+    <div class="modal-field"><label>Closing date (e.g. 30 Jun 2026)</label><input type="text" id="f_endDate"></div>
+    <div class="modal-field"><label>Assigned marketer</label><select id="f_marketer"><option value="">— none —</option></select></div>
+    <div class="modal-field"><label>Bid status</label>
+      <select id="f_adStatus">
+        <option value="">— none —</option>
+        <option>Watch</option><option>Identified</option><option>Qualified</option>
+        <option>Preparing</option><option>Submitted</option><option>Won</option>
+        <option>Lost</option><option>Withdrawn</option>
+      </select>
+    </div>
+    <div class="modal-field"><label>Notes</label><textarea id="f_notes" placeholder="Any additional notes…"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn danger" id="btnDelete" style="display:none" onclick="deleteFromModal()">Delete</button>
+      <button class="btn primary" id="btnSave" onclick="saveModal()">Save tender</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════
+//  CONFIG — paste your Supabase credentials here
+// ══════════════════════════════════════════════
+const SUPABASE_URL = 'https://gtmpznatlmwowrmtohcp.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd0bXB6bmF0bG13b3dybXRvaGNwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwODE2NTEsImV4cCI6MjA5MTY1NzY1MX0.Q1mSk_j7PrqKjfdp3Q7SbwDbM3dbE7aLIsptJVpY5nc';
+const BACKEND_URL = 'http://localhost:3000'; 
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ══════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════
+let tenders = [];
+let knownUsers = [];
+let currentUser = null;
+let sortField = 'days_left';
+let sortDir = 1;
+let editingId = null;
+
+// ══════════════════════════════════════════════
+//  SEED DATA (173 tenders — run once via seedDB())
+// ══════════════════════════════════════════════
+const SEED = [{"id":"160","title":"Group Life, Last Expense, Medical, Motor, Property","endDate":"10 Feb 2026","peName":"Kenya Airports Authority","category":"Medical/Health"},{"id":"162","title":"Medical, GPA/WIBA, Group Life, Asset, Liability","endDate":"15 Feb 2026","peName":"Kenya Pipeline Company","category":"Medical/Health"},{"id":"164","title":"Medical, GPA/WIBA, Group Life, Motor Fleet, Property, Liability","endDate":"20 Feb 2026","peName":"Kenya Power","category":"Medical/Health"},{"id":"152","title":"Medical, GPA/WIBA, Motor, Property, Liability","endDate":"25 Mar 2026","peName":"Central Bank of Kenya","category":"Medical/Health"},{"id":"158","title":"Medical, GPA/WIBA, Motor, Property","endDate":"10 Apr 2026","peName":"Kenya Roads Board","category":"Medical/Health"},{"id":"157","title":"Medical, GPA/WIBA, Group Life, Motor, Property","endDate":"15 Apr 2026","peName":"Communications Authority of Kenya","category":"Medical/Health"},{"id":"165","title":"Medical, GPA/WIBA, Motor, Property","endDate":"15 Apr 2026","peName":"Kenya Bureau of Standards","category":"Medical/Health"},{"id":"153","title":"Medical, GPA/WIBA, Motor, Property","endDate":"20 Apr 2026","peName":"Energy and Petroleum Regulatory Authority","category":"Medical/Health"},{"id":"166","title":"Medical, GPA/WIBA, Group Life, Motor, Property","endDate":"20 Apr 2026","peName":"Export Processing Zones Authority","category":"Medical/Health"},{"id":"1","title":"PROVISION OF COMPREHESIVE /THIRD PARTY INSURANCE FOR MOTORCYLES","endDate":"23 Apr 2026","peName":"Kwale Water and Sewerage Company Ltd","category":"Motor Vehicle"},{"id":"2","title":"COMPREHENSIVE MOTOR VEHICLE INSURANCE","endDate":"27 Apr 2026","peName":"County Assembly of Nyandarua","category":"Motor Vehicle"},{"id":"4","title":"TENDER FOR PROVISION OF COMPREHENSIVE MEDICAL INSURANCE, GROUP PERSONAL ACCIDENT, GROUP LIFE AND WIBA COVERS FOR COUNTY GOVERNMENT OF KIRINYAGA STAFFS.","endDate":"30 Apr 2026","peName":"Kirinyaga County Government","category":"Medical/Health"},{"id":"3","title":"PROVISION OF MEDICAL INSURANCE COVER FOR THE UNIVERSITY STAFF & DEPENDANTS","endDate":"30 Apr 2026","peName":"Murang\u2019a University of Technology","category":"Medical/Health"},{"id":"5","title":"Provision of WIBA and GPA Insurance Services for One Year","endDate":"30 Apr 2026","peName":"Coast Water Works Development Agency","category":"Life/GPA/WIBA"},{"id":"6","title":"PROVISION OF MOTOR VEHICLE COMPREHENSIVE INSURANCES","endDate":"01 May 2026","peName":"Engineers Board of Kenya","category":"Motor Vehicle"},{"id":"7","title":"PROVISION OF GROUP LIFE INSURANCE COVER FOR THE COUNTY ASSEMBLY OF NYERI MEMBERS (MCA'S), COUNTY ASSEMBLY SERVICE BOARD MEMBERS (CASB) AND ASSEMBLY STAFF FOR THE FINANCIAL YEAR 2024-2025","endDate":"03 May 2026","peName":"County Assembly Of Nyeri","category":"Life/GPA/WIBA"},{"id":"8","title":"PROVISION OF COMPREHENSIVE INSURANCE COVER FOR COUNTY VEHICLES AND MOTORBIKES.","endDate":"04 May 2026","peName":"Kwale County Government","category":"Motor Vehicle"},{"id":"159","title":"Medical, GPA/WIBA, Group Life, Motor Fleet, Property, Liability","endDate":"05 May 2026","peName":"National Oil Corporation of Kenya","category":"Medical/Health"},{"id":"9","title":"PROVISION OF COMPREHENSIVE INSURANCE COVER FOR KDL 139U TOYOTA PRADO","endDate":"06 May 2026","peName":"Lake Victoria South Water Services Board","category":"Comprehensive/Other"},{"id":"10","title":"PROVISIONS OF MOTOR VEHICLE INSURANCE","endDate":"08 May 2026","peName":"Women Enterprise Fund","category":"Motor Vehicle"},{"id":"154","title":"Medical, GPA/WIBA, Group Life, Asset","endDate":"10 May 2026","peName":"Women Enterprise Fund","category":"Medical/Health"},{"id":"11","title":"Provision of Comprehensive Insurance for 3No Motor Vehicles","endDate":"12 May 2026","peName":"Kwale Water and Sewerage Company Ltd","category":"Motor Vehicle"},{"id":"12","title":"Provision of Council Member's Group Medical & Group Accident Insurance Covers.","endDate":"14 May 2026","peName":"Dedan Kimathi University of Technology","category":"Medical/Health"},{"id":"155","title":"Medical, GPA/WIBA, Motor, Property","endDate":"15 May 2026","peName":"National Mining Corporation","category":"Medical/Health"},{"id":"13","title":"Provision of Insurance Cover for Coffee (a) Goods In Transit (b) Burglary (c) Fire & Allied","endDate":"19 May 2026","peName":"Dedan Kimathi University of Technology","category":"Property/Assets"},{"id":"14","title":"PROVISION OF COMPREHENSIVE INSURANCE COVER FOR NETFUND MOTOR VEHICLE REGISTRATION NUMBER KBN 292E FOR ONE YEAR.","endDate":"21 May 2026","peName":"Netfund","category":"Motor Vehicle"},{"id":"15","title":"PROVISION OF MOTOR VEHICLE INSURANCE SERVICE FOR KCT 856Y & KCT 858Y","endDate":"22 May 2026","peName":"Public Benefit Organizations Regulatory Authority","category":"Motor Vehicle"},{"id":"16","title":"TENDER FOR PROCUREMENT OF MEDICAL INSURANCE SERVICES FOR KISII COUNTY ASSEMBLY STAFF AND THEIR QUALIFIED DEPENDENTS","endDate":"23 May 2026","peName":"County Assembly Of Kisii","category":"Medical/Health"},{"id":"17","title":"provision of insurance cover","endDate":"25 May 2026","peName":"Kenya Animal Genetic Resources Centre","category":"Comprehensive/Other"},{"id":"18","title":"RETENDER FOR PROVISION OF MEDICAL INSURANCE COVER FOR NCA STAFF AND BOARD MEMBERS FOR A PERIOD OF ONE YEAR","endDate":"26 May 2026","peName":"National Construction Authority","category":"Medical/Health"},{"id":"20","title":"PROVISION COMPREHESIVE MOTOR VEHICLE INSURANCE COVER FOR 45CG,215A,45CG032A,KBY 924C AND KBY 925C","endDate":"27 May 2026","peName":"County Assembly Of Kisii","category":"Motor Vehicle"},{"id":"19","title":"PROVISION OF BUILDING INSURANCE COVER FOR BLOCK A,BLOCK B ,BLOCK C AND OLD MUNICIPAL BULDINGS OF KISII COUNTY ASSEMBLY.","endDate":"27 May 2026","peName":"County Assembly Of Kisii","category":"Property/Assets"},{"id":"22","title":"COMPREHENSIVE PROPERTY INSURANCE","endDate":"29 May 2026","peName":"County Assembly of Nyandarua","category":"Property/Assets"},{"id":"21","title":"PROVISION OF A COMPREHENSIVE VEHICLE INSURANCE COVER","endDate":"29 May 2026","peName":"MAMA NGINA UNIVERSITY COLLEGE","category":"Motor Vehicle"},{"id":"24","title":"PROVISION OF GENERAL INSURANCE COVER","endDate":"31 May 2026","peName":"Kenya Meat Commission","category":"Comprehensive/Other"},{"id":"23","title":"REQUEST FOR QUOTATIONS FOR PROVISION OF COMPREHENSIVE MOTOR VEHICLE INSURANCE","endDate":"31 May 2026","peName":"NEW KENYA PLANTERS COOPERATIVE UNION","category":"Motor Vehicle"},{"id":"167","title":"Medical, GPA/WIBA, Group Life, Motor Fleet, Asset","endDate":"15 Jun 2026","peName":"County Government of Nairobi","category":"Medical/Health"},{"id":"25","title":"Provision of Medical Insurance Services","endDate":"17 Jun 2026","peName":"Kericho County Government","category":"Medical/Health"},{"id":"26","title":"Provision of Motor Vehicle Comprehensive Insurance Cover","endDate":"19 Jun 2026","peName":"County Assembly Of Vihiga","category":"Motor Vehicle"},{"id":"28","title":"Provision of Motor Vehicles & Motor Cycles Insurance for National Industrial Training Authority","endDate":"20 Jun 2026","peName":"National Industrial Training Authority","category":"Motor Vehicle"},{"id":"168","title":"Medical, GPA/WIBA, Group Life, Motor Fleet, Asset","endDate":"20 Jun 2026","peName":"County Government of Kiambu","category":"Medical/Health"},{"id":"156","title":"Medical, Group Life, GPA/WIBA, Property","endDate":"20 Jun 2026","peName":"Moi Teaching and Referral Hospital","category":"Medical/Health"},{"id":"29","title":"Tender for provision of General Insurance services GPA/WIBA,Motor vehicles and other assets","endDate":"24 Jun 2026","peName":"Pest Control Products Board","category":"Motor Vehicle"},{"id":"169","title":"Medical, GPA/WIBA, Group Life, Motor Fleet, Asset","endDate":"25 Jun 2026","peName":"County Government of Kisumu","category":"Medical/Health"},{"id":"30","title":"PROVISION OF MEDICAL INSURANCE COVER FOR BOARD OF DIRECTORS AND KEPHIS STAFF","endDate":"29 Jun 2026","peName":"Kenya Plant Health Inspectorate Service","category":"Medical/Health"},{"id":"54","title":"Provision of Medical Insurance Cover for the Financial Year 2025/2026","endDate":"30 Jun 2026","peName":"Export Processing Zones Authority","category":"Medical/Health"},{"id":"57","title":"PROVISION OF STAFF MEDICAL INSURANCE COVER","endDate":"30 Jun 2026","peName":"Nakuru Water and Sanitation Services","category":"Medical/Health"},{"id":"56","title":"PROVISION OF GENERAL INSURANCE SERVICES","endDate":"30 Jun 2026","peName":"Nakuru Water and Sanitation Services","category":"Comprehensive/Other"},{"id":"55","title":"PROVISION OF INSURANCE SERVICES","endDate":"30 Jun 2026","peName":"Kwale High School","category":"Comprehensive/Other"},{"id":"53","title":"PROVISION OF GENERAL INSURANCE SERVICES","endDate":"30 Jun 2026","peName":"New Kenya Co-operative Creameries Ltd","category":"Comprehensive/Other"},{"id":"41","title":"Provision of General Insurance Services","endDate":"30 Jun 2026","peName":"Mathira water and Sanitation Company Ltd","category":"Comprehensive/Other"},{"id":"31","title":"TENDER DOCUMENT FOR THE PROVISION OF INPATIENT AND OUTPATIENT MEDICAL INSURANCE SERVICES","endDate":"30 Jun 2026","peName":"COMMODITIES FUND","category":"Medical/Health"},{"id":"32","title":"TENDER DOCUMENT FOR PROVISION OF GENERAL INSURANCE SERVICES","endDate":"30 Jun 2026","peName":"COMMODITIES FUND","category":"Comprehensive/Other"},{"id":"33","title":"PROVISION OF MEDICAL INSURANCE SERVICES","endDate":"30 Jun 2026","peName":"Agro-Chemical and Food Company Limited","category":"Medical/Health"},{"id":"34","title":"PROVISION OF COMPREHENSIVE INSURANCE COVER TO KNBS MOTOR VEHICLES AND MOTORCYCLES","endDate":"30 Jun 2026","peName":"Kenya National Bureau of Statistics","category":"Motor Vehicle"},{"id":"35","title":"PROVISION OF GENERAL INSURANCE SERVICES","endDate":"30 Jun 2026","peName":"Kenya Plant Health Inspectorate Service","category":"Comprehensive/Other"},{"id":"36","title":"PROVISION OF GENERAL INSURANCE SERVICES","endDate":"30 Jun 2026","peName":"LAIKIPIA UNIVERSITY","category":"Comprehensive/Other"},{"id":"38","title":"PROVISION OF MEDICAL INSURANCE SERVICES FOR KENYA FILM COMMISSION BOARD OF DIRECTORS AND STAFF","endDate":"30 Jun 2026","peName":"Kenya Film Commission","category":"Medical/Health"},{"id":"39","title":"VEHICLE INSURANCE","endDate":"30 Jun 2026","peName":"St. Marks Teachers College Kigari","category":"Motor Vehicle"},{"id":"40","title":"PROVISION OF GENERAL INSURANCE SERVICES (UNDERWRITERS ONLY)","endDate":"30 Jun 2026","peName":"NYAHURURU WATER AND SANITATION COMPANY LTD","category":"Comprehensive/Other"},{"id":"42","title":"PROVISION OF GENERAL INSURANCE COVER","endDate":"30 Jun 2026","peName":"Kenya Institute for Public Policy and Research and Analysis","category":"Comprehensive/Other"},{"id":"43","title":"PROVISION OF GROUP LIFE INSURANCE COVER","endDate":"30 Jun 2026","peName":"Kenya Institute for Public Policy and Research and Analysis","category":"Life/GPA/WIBA"},{"id":"44","title":"Provision of General Insurance Cover","endDate":"30 Jun 2026","peName":"Agriculture and Food Authority","category":"Comprehensive/Other"},{"id":"46","title":"Provision of Motor Vehicles & Motor Cycles Insurance","endDate":"30 Jun 2026","peName":"National Industrial Training Authority","category":"Motor Vehicle"},{"id":"47","title":"Provision of Medical Insurance Cover","endDate":"30 Jun 2026","peName":"Kitui Water & Sanitation Company","category":"Medical/Health"},{"id":"48","title":"Provision of General Insurance Cover","endDate":"30 Jun 2026","peName":"National Housing Corporation","category":"Comprehensive/Other"},{"id":"49","title":"Provision of Group Life Insurance cover","endDate":"30 Jun 2026","peName":"National Housing Corporation","category":"Life/GPA/WIBA"},{"id":"50","title":"PROVISION OF GENERAL INSURANCE SERVICES","endDate":"30 Jun 2026","peName":"New Kenya Co-operative Creameries Ltd","category":"Comprehensive/Other"},{"id":"45","title":"Provision of Medical Insurance Cover for Staff and Board Members","endDate":"30 Jun 2026","peName":"Kenya Dairy Board","category":"Medical/Health"},{"id":"58","title":"PROVISION OF STAFF INSURANCE COVER GPA/WIBA","endDate":"08 Jul 2026","peName":"South Eastern Kenya University","category":"Life/GPA/WIBA"},{"id":"170","title":"Medical, GPA/WIBA, Group Life, Motor, Property","endDate":"10 Jul 2026","peName":"University of Nairobi","category":"Medical/Health"},{"id":"59","title":"PROVISION OF MEDICAL INSURANCE COVER FOR BOARD MEMBERS AND STAFF","endDate":"10 Jul 2026","peName":"Regional Centre on Groundwater Resources Education, Training & Research","category":"Medical/Health"},{"id":"60","title":"Provision of Medical Insurance Cover for Staff Board Members.","endDate":"13 Jul 2026","peName":"Agriculture and Food Authority","category":"Medical/Health"},{"id":"171","title":"Medical, GPA/WIBA, Group Life, Motor, Property","endDate":"15 Jul 2026","peName":"Kenyatta University","category":"Medical/Health"},{"id":"172","title":"Medical, GPA/WIBA, Group Life, Motor, Property","endDate":"20 Jul 2026","peName":"Egerton University","category":"Medical/Health"},{"id":"62","title":"PROVISION OF MOTOR VEHICLE AND MOTOR BIKE INSURANCE COVER","endDate":"21 Jul 2026","peName":"County Assembly Of Taita-Taveta","category":"Motor Vehicle"},{"id":"61","title":"PROVISION OF MEDICAL INSURANCE COVER FOR NETFUND STAFF AND BOARD MEMBERS FOR TWO (2) YEARS","endDate":"21 Jul 2026","peName":"Netfund","category":"Medical/Health"},{"id":"173","title":"Medical, GPA/WIBA, Group Life, Motor, Property","endDate":"25 Jul 2026","peName":"Technical University of Kenya","category":"Medical/Health"},{"id":"63","title":"PROVISION OF MEDICAL INSURANCE COVER","endDate":"25 Jul 2026","peName":"Independent Policing Oversight Authority","category":"Medical/Health"},{"id":"64","title":"PROVISION OF GENERAL INSURANCE FIRE,BUGLARY AND ALL RISK","endDate":"26 Jul 2026","peName":"Kenya Vision 2030 Delivery Secretariat","category":"Property/Assets"},{"id":"65","title":"PROVISION OF FIELD STAFF COMPREHENSIVE MEDICAL INSURANCE COVER","endDate":"27 Jul 2026","peName":"Women Enterprise Fund","category":"Medical/Health"},{"id":"67","title":"Provision of Motor Vehicles & Motor Cycles Insurance","endDate":"29 Jul 2026","peName":"National Industrial Training Authority","category":"Motor Vehicle"},{"id":"68","title":"PROVISION OF MOTOR VEHICLE INSURANCE COVER","endDate":"30 Jul 2026","peName":"KERIO VALLEY DEVELOPMENT AUTHORITY (KVDA)","category":"Motor Vehicle"},{"id":"71","title":"PROVISION OF GROUP PERSONAL ACCIDENT (GPA)/WORK INJURY BENEFIT ACT/(WIBA) INSURANCE COVER","endDate":"31 Jul 2026","peName":"Multimedia University of Kenya","category":"Life/GPA/WIBA"},{"id":"73","title":"TENDER FOR PROVISION OF INSURANCE SERVICES-PROPERTY, PLANT AND EQUIPMENT","endDate":"31 Jul 2026","peName":"Thika Technical Training Institute","category":"Property/Assets"},{"id":"72","title":"PROVISION OF GROUP LIFE INSURANCE, GPA AND WIBA INSURANCE COVERS FOR STAFF","endDate":"31 Jul 2026","peName":"Women Enterprise Fund","category":"Life/GPA/WIBA"},{"id":"74","title":"Provision of Insurance: General, Life, Students on attachment, Motor Vehicles, Fire and Burglary","endDate":"01 Aug 2026","peName":"Murang\u2019a University of Technology","category":"Motor Vehicle"},{"id":"75","title":"PROVISION OF GENERAL INSURANCE COVERS FOR THE FINANCIAL YEAR 2025-2026","endDate":"07 Aug 2026","peName":"Tana And Athi Rivers Development Authority","category":"Comprehensive/Other"},{"id":"76","title":"PROVISION OF ASSET INSURANCE SERVICES","endDate":"13 Aug 2026","peName":"Universities Fund","category":"Property/Assets"},{"id":"77","title":"Provision of medical insurance cover","endDate":"15 Aug 2026","peName":"County Assembly of Machakos","category":"Medical/Health"},{"id":"78","title":"Provision of General Insurance cover","endDate":"17 Aug 2026","peName":"National Construction Authority","category":"Comprehensive/Other"},{"id":"79","title":"Provision of Group life, WIBA and Personal Accident Insurance Cover","endDate":"23 Aug 2026","peName":"Rongo University","category":"Life/GPA/WIBA"},{"id":"80","title":"Provision of general insurance and group life cover","endDate":"31 Aug 2026","peName":"County Assembly of Machakos","category":"Life/GPA/WIBA"},{"id":"81","title":"PROVISION OF INSURANCE BROKERAGE SERVICES FOR USHURU PENSION TOWERS","endDate":"16 Sep 2026","peName":"Kenya Revenue Authority","category":"Comprehensive/Other"},{"id":"82","title":"PROVISION OF COMPREHENSIVE MOTOR PRIVATE VEHICLES AND CYCLES INSURANCE COVER FOR TWO YEARS","endDate":"21 Sep 2026","peName":"Teachers Service Commission","category":"Motor Vehicle"},{"id":"163","title":"Medical, GPA/WIBA, Group Life, Motor, Property","endDate":"25 Sep 2026","peName":"Kenya Revenue Authority","category":"Medical/Health"},{"id":"83","title":"PROVISION OF COMPREHENSIVE STAFF MEDICAL INSURANCE COVER (RETENDER)","endDate":"27 Sep 2026","peName":"Media Council of Kenya","category":"Medical/Health"},{"id":"84","title":"THE PROVISION OF COMPREHENSIVE MEDICAL INSURANCE SERVICES FOR THE BOARD MEMBERS AND STAFF","endDate":"30 Sep 2026","peName":"National Biosafety Authority","category":"Medical/Health"},{"id":"85","title":"PROVISION OF INSURANCE BROKERAGE SERVICES FOR A PERIOD OF TWO (2) YEARS","endDate":"30 Sep 2026","peName":"Kenya Seed Company","category":"Comprehensive/Other"},{"id":"88","title":"PROVISION OF MEDICAL INSURANCE COVER (RE-ADVERTISEMENT)","endDate":"02 Oct 2026","peName":"Meru University of Science and Technology","category":"Medical/Health"},{"id":"89","title":"PROVISION OF COMPREHESIVE MOTOR VEHICLE INSURANCE COVER","endDate":"09 Oct 2026","peName":"Multimedia University of Kenya","category":"Motor Vehicle"},{"id":"90","title":"Provision of General Insurance Brokerage Services at Sports Kenya","endDate":"14 Oct 2026","peName":"SPORTS KENYA","category":"Comprehensive/Other"},{"id":"91","title":"PROVISION OF GROUP MEDICAL INSURANCE COVER TO KNBS STAFF","endDate":"15 Oct 2026","peName":"Kenya National Bureau of Statistics","category":"Medical/Health"},{"id":"93","title":"PROVISION OF GROUP LIFE INSURANCE COVER TO KNBS STAFF","endDate":"15 Oct 2026","peName":"Kenya National Bureau of Statistics","category":"Life/GPA/WIBA"},{"id":"94","title":"PROVISION OF GROUP PERSONAL ACCIDENT AND WORK INJURY BENEFITS POLICY","endDate":"15 Oct 2026","peName":"Kenya National Bureau of Statistics","category":"Life/GPA/WIBA"},{"id":"95","title":"PROVISION OF SECRETARIAT STAFF COMPREHENSIVE MEDICAL INSURANCE COVER","endDate":"18 Oct 2026","peName":"Women Enterprise Fund","category":"Medical/Health"},{"id":"96","title":"PROVISION OF INSURANCE BROKERAGE SERVICES FOR THE YEARS 2024-2026","endDate":"22 Oct 2026","peName":"Karatina University","category":"Comprehensive/Other"},{"id":"99","title":"PROVISION OF MEDICAL INSURANCE SERVICES","endDate":"22 Oct 2026","peName":"The Kenyatta International Convention Centre","category":"Medical/Health"},{"id":"100","title":"PROVISION OF GROUP PERSONAL ACCIDENT AND FOREIGN TRAVEL INSURANCE COVER","endDate":"22 Oct 2026","peName":"Ethics and Anti-Corruption Commission","category":"Life/GPA/WIBA"},{"id":"101","title":"PROVISION OF GENERAL INSURANCE SERVICES","endDate":"23 Oct 2026","peName":"The Kenyatta International Convention Centre","category":"Comprehensive/Other"},{"id":"102","title":"PROVISION OF STAFF MEDICAL INSURANCE COVER","endDate":"30 Oct 2026","peName":"Kenya Forestry Research Institute","category":"Medical/Health"},{"id":"103","title":"PROVISION OF GENERAL INSURANCE OF ASSETS, GROUP PERSONAL ACCIDENT AND WIBA FOR STAFF","endDate":"31 Oct 2026","peName":"Tourism Fund","category":"Life/GPA/WIBA"},{"id":"106","title":"TENDER DOCUMENT FOR PROVISION OF STAFF MEDICAL INSURANCE COVER FOR A THREE-YEAR FRAMEWORK CONTRACT","endDate":"31 Oct 2026","peName":"Ethics and Anti-Corruption Commission","category":"Medical/Health"},{"id":"105","title":"Provision of Staff Medical Insurance Cover","endDate":"31 Oct 2026","peName":"Kenya Agricultural & Livestock Research Organization","category":"Medical/Health"},{"id":"104","title":"Provision of Group life, WIBA and Personal Accident Insurance Cover","endDate":"31 Oct 2026","peName":"Rongo University","category":"Life/GPA/WIBA"},{"id":"108","title":"PROVISION OF MOTOR VEHICLE INSURANCE BROKERAGE SERVICES","endDate":"01 Nov 2026","peName":"Kenya National Highway Authority","category":"Motor Vehicle"},{"id":"109","title":"PROVISION OF STAFF GROUP LIFE INSURANCE AND BOARD OF TRUSTEES MEDICAL INSURANCE COVER","endDate":"02 Nov 2026","peName":"National Social Security Fund","category":"Medical/Health"},{"id":"111","title":"Provision of Insurance on Building, Assets, Theft, Fire & Burglary.","endDate":"06 Nov 2026","peName":"County Assembly Of Muranga","category":"Property/Assets"},{"id":"112","title":"PROVISION OF COMPREHENSIVE MEDICAL INSURANCE COVER FOR HON. SPEAKER, MEMBERS OF COUNTY ASSEMBLY AND CASB MEMBERS.","endDate":"09 Nov 2026","peName":"ELGEYO MARAKWET COUNTY ASSEMBLY","category":"Medical/Health"},{"id":"113","title":"PROVISION OF MEDICAL INSURANCE COVER FOR HON. SPEAKER, MEMBERS OF COUNTY ASSEMBLY (MCAS), COUNTY ASSEMBLY SERVICE BOARD MEMBERS AND MEMBERS OF STAFF","endDate":"11 Nov 2026","peName":"county assembly of nyamira","category":"Medical/Health"},{"id":"114","title":"TENDER FOR PROVISION OF GPA & WIBA INSURANCE COVERS FOR STAFF AND MCA'S","endDate":"12 Nov 2026","peName":"county assembly of nyamira","category":"Life/GPA/WIBA"},{"id":"115","title":"Provision of Motor Vehicle Insurance.","endDate":"13 Nov 2026","peName":"County Assembly Of Muranga","category":"Motor Vehicle"},{"id":"116","title":"Provision of Group Medical Insurance Cover for the Members of the County Assembly","endDate":"14 Nov 2026","peName":"COUNTY ASSEMBLY OF KIAMBU","category":"Medical/Health"},{"id":"117","title":"PROVISION OF GENERAL INSURANCE COVER FOR 2024-2026 FINANCIAL YEARS","endDate":"22 Nov 2026","peName":"KAGUMO TEACHER'S TRAINING COLLEGE","category":"Comprehensive/Other"},{"id":"118","title":"Provision of Group Medical Insurance Cover for the staff of the County Assembly","endDate":"28 Nov 2026","peName":"COUNTY ASSEMBLY OF KIAMBU","category":"Medical/Health"},{"id":"119","title":"PROVISION OF ASSET INSURANCE","endDate":"30 Nov 2026","peName":"Salaries & Remuneration Commission","category":"Property/Assets"},{"id":"120","title":"PROVISION OF GROUP LIFE INSURANCE COVER FOR MEMBERS TO NAIROBI CITY COUNTY ASSEMBLY","endDate":"30 Nov 2026","peName":"County Assembly Of Nairobi","category":"Life/GPA/WIBA"},{"id":"121","title":"PROVISION OF MEDICAL INSURANCE COVER & GROUP LIFE INSURANCE COVER WITH LAST EXPENSE INSURANCE FOR STAFF MEMBERS","endDate":"30 Nov 2026","peName":"Nyandarua County Government","category":"Medical/Health"},{"id":"122","title":"PROVISION OF INSURANCE BROKERAGE SERVICES FOR KRA STAFF AND ASSETS","endDate":"30 Nov 2026","peName":"Kenya Revenue Authority","category":"Property/Assets"},{"id":"123","title":"PROVISION OF GROUP PERSONAL ACCIDENT INSURANCE COVER (GPA) TO MEMBERS OF NAIROBI CITY COUNTY ASSEMBLY","endDate":"30 Nov 2026","peName":"County Assembly Of Nairobi","category":"Life/GPA/WIBA"},{"id":"124","title":"PROVISION OF COMPREHENSIVE MEDICAL INSURANCE COVER FOR PSC STAFF","endDate":"30 Nov 2026","peName":"Public Service Commission","category":"Medical/Health"},{"id":"125","title":"DIRECT PROCUREMENT FOR PROVISION OF MEDICAL INSURANCE FOR STAFF AND DEPENDANTS","endDate":"01 Dec 2026","peName":"Busia County Government","category":"Medical/Health"},{"id":"126","title":"PROCUREMENT OF MEDICAL INSURANCE SERVICES FOR MEMBERS OF COUNTY ASSEMBLY","endDate":"04 Dec 2026","peName":"County Assembly Of Kisii","category":"Medical/Health"},{"id":"127","title":"PROVISION OF GENERAL INSURANCE BROKERAGE SERVICES FOR AUTHORITY ASSETS","endDate":"10 Dec 2026","peName":"Kenya National Highway Authority","category":"Property/Assets"},{"id":"128","title":"PROVISION OF MOTOR VEHICLE INSURANCE","endDate":"17 Dec 2026","peName":"Pwani University","category":"Motor Vehicle"},{"id":"129","title":"PROVISION OF MEDICAL INSURANCE COVER FOR MEMBERS OF STAFF.","endDate":"18 Dec 2026","peName":"County Assembly Of Nakuru","category":"Medical/Health"},{"id":"130","title":"PROVISION OF MEDICAL INSURANCE COVER FOR GLOBAL FUND PROGRAM STAFF","endDate":"22 Dec 2026","peName":"Kenya Medical Supplies Authority","category":"Medical/Health"},{"id":"131","title":"PROVISION OF MEDICAL INSURANCE, GROUP LIFE(GLA), GROUP PERSONAL ACCIDENT(GPA), WORK INJURY BENEFIT(WIBA)","endDate":"23 Dec 2026","peName":"County Assembly Of Turkana","category":"Medical/Health"},{"id":"132","title":"Provision of Medical Insurance Cover for Members and Staff of County Assembly of Murang'a","endDate":"31 Dec 2026","peName":"County Assembly Of Muranga","category":"Medical/Health"},{"id":"133","title":"Provision of Motor Vehicle Insurance Covers","endDate":"31 Dec 2026","peName":"Nyayo Tea Zones Develop Corporation","category":"Motor Vehicle"},{"id":"134","title":"PROVISION OF INSURANCE BROKERAGE SERVICES","endDate":"31 Dec 2026","peName":"Kenya Medical Supplies Authority","category":"Comprehensive/Other"},{"id":"135","title":"PROVISION OF MOTOR VEHICLE INSURANCE COVER FOR THE FINANCIAL YEAR 2025-2026","endDate":"31 Dec 2026","peName":"County Assembly Of Nyeri","category":"Motor Vehicle"},{"id":"136","title":"Provision of Medical Insurance Cover for County Government of Nyamira Executive Staff","endDate":"12 Jan 2027","peName":"Nyamira County Government","category":"Medical/Health"},{"id":"137","title":"TENDER FOR PROVISION OF MEDICAL INSURANCE COVER FOR COUNTY ASSEMBLY OF LAIKIPIA MEMBERS AND STAFF","endDate":"22 Jan 2027","peName":"County Assembly of Laikipia","category":"Medical/Health"},{"id":"138","title":"provision of annual comprehensive motor vehicle insurance policy cover","endDate":"29 Jan 2027","peName":"Maasai Mara University","category":"Motor Vehicle"},{"id":"139","title":"PROVISION OF GROUP PERSONAL ACCIDENT INSURANCE COVER FOR MEMBERS OF THE JUDICIARY","endDate":"31 Jan 2027","peName":"The Judiciary","category":"Life/GPA/WIBA"},{"id":"140","title":"Provision of comprehensive insurance cover for NETFUND motor vehicles","endDate":"11 Feb 2027","peName":"Netfund","category":"Motor Vehicle"},{"id":"141","title":"PROVISION FOR COMPREHENSIVE MOTOR VEHICLE INSURANCE FOR KDR 375P","endDate":"11 Feb 2027","peName":"Open University of Kenya","category":"Motor Vehicle"},{"id":"142","title":"COMPREHENSIVE MOTOR VEHICLE INSURANCE","endDate":"12 Feb 2027","peName":"County Assembly of Nyandarua","category":"Motor Vehicle"},{"id":"143","title":"TENDER FOR PROVISION OF STAFF MEDICAL INSURANCE COVER","endDate":"18 Feb 2027","peName":"Kenya Universities and Colleges central placement service","category":"Medical/Health"},{"id":"144","title":"Proposed Medical Insurance Cover for MCA's and Staff","endDate":"24 Feb 2027","peName":"County Assembly Of Trans Nzoia","category":"Medical/Health"},{"id":"145","title":"PROVISION OF GROUP LIFE ASSURANCE AND LAST EXPENSE INSURANCE BROKERAGE SERVICES","endDate":"28 Feb 2027","peName":"Kenya Revenue Authority","category":"Life/GPA/WIBA"},{"id":"146","title":"TENDER FOR PROVISION OF GENERAL INSURANCE SERVICES","endDate":"28 Feb 2027","peName":"Postal Corporation of Kenya","category":"Comprehensive/Other"},{"id":"147","title":"Provision of Medical Insurance Cover for Baringo County Staff","endDate":"28 Feb 2027","peName":"Baringo County Government","category":"Medical/Health"},{"id":"148","title":"PROVISION OF COMPREHENSIVE MEDICAL INSURANCE COVER FOR STAFF","endDate":"28 Feb 2027","peName":"ELGEYO MARAKWET COUNTY ASSEMBLY","category":"Medical/Health"},{"id":"149","title":"PROVISION OF MEDICAL INSURANCE COVER FOR STAFF AND COUNCIL MEMBERS AT THE KISUMU NATIONAL POLYTECHNIC","endDate":"19 Mar 2027","peName":"THE KISUMU NATIONAL POLYTECHNIC","category":"Medical/Health"},{"id":"150","title":"PROCUREMENT OF MOTOR VEHICLE INSURANCE POLICY","endDate":"23 Mar 2027","peName":"Kenya Medical Supplies Authority","category":"Motor Vehicle"},{"id":"151","title":"PROVISION OF MEDICAL INSURANCE COVER","endDate":"31 Mar 2027","peName":"Kenya Medical Supplies Authority","category":"Medical/Health"}];
+
+// ══════════════════════════════════════════════
+//  HELPERS
+// ══════════════════════════════════════════════
+function calcDays(endDate) {
+  try {
+    const d = new Date(endDate);
+    if (isNaN(d)) {
+      const months = {jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
+      const parts = endDate.trim().split(/\s+/);
+      if (parts.length === 3) {
+        const m = months[parts[1].toLowerCase().slice(0,3)];
+        if (m !== undefined) return Math.round((new Date(+parts[2],m,+parts[0]) - new Date()) / 86400000);
+      }
+      return 0;
+    }
+    return Math.round((d - new Date()) / 86400000);
+  } catch(e) { return 0; }
+}
+
+function urgClass(d) {
+  if (d < 0) return 'expired';
+  if (d <= 14) return 'urgent';
+  if (d <= 30) return 'soon';
+  if (d <= 60) return 'upcoming';
+  return 'ok';
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function toast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (type ? ' '+type : '');
+  clearTimeout(t._t);
+  t._t = setTimeout(() => t.className = 'toast', 2500);
+}
+
+function tsNow() {
+  return new Date().toLocaleString('en-KE', {dateStyle:'medium', timeStyle:'short'});
+}
+
+// ══════════════════════════════════════════════
+//  AUTH
+// ══════════════════════════════════════════════
+async function doLogin() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const pass = document.getElementById('loginPass').value;
+  const btn = document.getElementById('loginBtn');
+  const err = document.getElementById('loginError');
+  err.classList.remove('show');
+  btn.disabled = true;
+  btn.textContent = 'Signing in…';
+  const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
+  btn.disabled = false;
+  btn.textContent = 'Sign in';
+  if (error) {
+    err.textContent = 'Incorrect email or password.';
+    err.classList.add('show');
+    document.getElementById('loginPass').value = '';
+    return;
+  }
+  currentUser = data.user;
+  await initApp();
+}
+
+async function doLogout() {
+  await sb.auth.signOut();
+  currentUser = null;
+  tenders = [];
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('loginScreen').classList.add('show');
+  document.getElementById('loginEmail').value = '';
+  document.getElementById('loginPass').value = '';
+  document.getElementById('userChip').style.display = 'none';
+  document.getElementById('adminBar').classList.remove('show');
+}
+
+// ══════════════════════════════════════════════
+//  APP INIT
+// ══════════════════════════════════════════════
+async function initApp() {
+  document.getElementById('loginScreen').classList.remove('show');
+  document.getElementById('app').style.display = 'block';
+  await upsertProfile(currentUser);
+  const meta = currentUser.user_metadata || {};
+  const name = meta.full_name || currentUser.email.split('@')[0];
+  const role = meta.role || 'user';
+  const initials = name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  const chip = document.getElementById('userChip');
+  chip.style.display = 'flex';
+  document.getElementById('userAvatar').textContent = initials;
+  document.getElementById('userName').textContent = name;
+  document.getElementById('userRoleLbl').textContent = role === 'admin' ? 'Administrator' : 'Marketer';
+  if (role === 'admin') {
+    document.getElementById('adminBar').classList.add('show');
+  }
+  await loadTenders();
+  await loadProfiles();
+  subscribeRealtime();
+}
+
+// ══════════════════════════════════════════════
+//  TENDERS — SUPABASE CRUD
+// ══════════════════════════════════════════════
+async function loadTenders() {
+  const { data, error } = await sb.from('tenders').select('*').order('days_left', { ascending: true });
+  if (error) { toast('Error loading tenders', 'error'); return; }
+  tenders = data || [];
+  renderTable();
+}
+
+async function insertTender(t) {
+  console.log('📝 Inserting tender:', t);
+  const { data, error } = await sb.from('tenders').insert([t]).select().single();
+  if (error) { 
+    console.error('❌ Insert error:', error);
+    toast(`Error saving tender: ${error.message}`, 'error'); 
+    return null; 
+  }
+  await logAudit('created', data, null, data);
+  return data;
+}
+
+async function updateTender(id, changes, oldData) {
+  const { data, error } = await sb.from('tenders').update(changes).eq('id', id).select().single();
+  if (error) { toast('Error updating tender', 'error'); return null; }
+  await logAudit('updated', data, oldData, changes);
+  return data;
+}
+
+async function deleteTender(id) {
+  const old = tenders.find(t => t.id === id);
+  const { error } = await sb.from('tenders').delete().eq('id', id);
+  if (error) { toast('Error deleting tender', 'error'); return false; }
+  await logAudit('deleted', old, old, null);
+  return true;
+}
+
+// ══════════════════════════════════════════════
+//  REALTIME
+// ══════════════════════════════════════════════
+function subscribeRealtime() {
+  sb.channel('tenders-changes')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'tenders' }, () => {
+      loadTenders();
+    })
+    .subscribe();
+}
+
+// ══════════════════════════════════════════════
+//  AUDIT LOG
+// ══════════════════════════════════════════════
+async function logAudit(action, tender, oldData, newData) {
+  const meta = currentUser?.user_metadata || {};
+  const name = meta.full_name || currentUser?.email?.split('@')[0] || 'Unknown';
+  let changes = {};
+  if (action === 'updated' && oldData && newData) {
+    for (const key of Object.keys(newData)) {
+      if (oldData[key] !== newData[key]) {
+        changes[key] = { from: oldData[key], to: newData[key] };
+      }
+    }
+  }
+  await sb.from('audit_log').insert([{
+    user_email: currentUser?.email || '',
+    user_name: name,
+    action,
+    tender_id: tender?.id || null,
+    tender_pe_name: tender?.pe_name || '',
+    tender_title: tender?.title || '',
+    changes
+  }]);
+}
+
+async function loadAuditLog() {
+  const list = document.getElementById('auditList');
+  list.innerHTML = '<div class="loading-state"><div class="spinner"></div><br><br>Loading…</div>';
+  const { data, error } = await sb.from('audit_log').select('*').order('created_at', { ascending: false }).limit(100);
+  if (error) { list.innerHTML = '<div class="audit-empty"><div class="audit-empty-icon">⚠️</div>Could not load audit log.</div>'; return; }
+  if (!data || !data.length) { list.innerHTML = '<div class="audit-empty"><div class="audit-empty-icon">📋</div><strong>No activity yet</strong><br><br>Changes to tenders will appear here.</div>'; return; }
+  const icons = { created: '＋', updated: '✎', deleted: '✕' };
+  list.innerHTML = data.map(entry => {
+    const dt = new Date(entry.created_at).toLocaleString('en-KE', {dateStyle:'medium', timeStyle:'short'});
+    const changes = entry.changes || {};
+    const changeRows = Object.entries(changes).map(([field, val]) => `
+      <div class="change-row">
+        <span class="change-field">${esc(field.replace(/_/g,' '))}</span>
+        <span class="change-old">${esc(String(val.from||'—'))}</span>
+        <span class="change-arrow">→</span>
+        <span class="change-new">${esc(String(val.to||'—'))}</span>
+      </div>`).join('');
+    return `
+      <div class="audit-item">
+        <div class="audit-icon ${entry.action}">${icons[entry.action]||'•'}</div>
+        <div class="audit-body">
+          <div class="audit-top">
+            <span class="audit-action ${entry.action}">${esc(entry.action)}</span>
+            <span class="audit-who">${esc(entry.user_name)}</span>
+            <span class="audit-when">${dt}</span>
+          </div>
+          <div class="audit-pe">${esc(entry.tender_pe_name)}${entry.tender_title ? ' — '+esc(entry.tender_title.slice(0,60))+(entry.tender_title.length>60?'…':'') : ''}</div>
+          ${changeRows ? '<div class="audit-changes">'+changeRows+'</div>' : ''}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════════
+//  VIEW SWITCHING
+// ══════════════════════════════════════════════
+function switchView(name, tab) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('view-'+name).classList.add('active');
+  tab.classList.add('active');
+  if (name === 'audit') loadAuditLog();
+}
+
+// ══════════════════════════════════════════════
+//  TABLE RENDER
+// ══════════════════════════════════════════════
+function updateStats(rows) {
+  document.getElementById('sUrgent').textContent = rows.filter(t => t.days_left >= 0 && t.days_left <= 14).length;
+  document.getElementById('sSoon').textContent = rows.filter(t => t.days_left >= 15 && t.days_left <= 30).length;
+  document.getElementById('sUpcoming').textContent = rows.filter(t => t.days_left > 30 && t.days_left <= 60).length;
+  document.getElementById('sOk').textContent = rows.filter(t => t.days_left > 60).length;
+  document.getElementById('sTotal').textContent = rows.filter(t => t.days_left >= 0).length;
+  
+  // For assigned count: admins see all assigned, users see only their own
+  let assignedCount = 0;
+  if (currentUser) {
+    const userRole = currentUser.user_metadata?.role || 'user';
+    const userName = currentUser.user_metadata?.full_name || currentUser.email?.split('@')[0] || '';
+    
+    if (userRole === 'admin') {
+      // Admins see all assigned tenders
+      assignedCount = tenders.filter(t => t.marketer && t.marketer.trim()).length;
+    } else {
+      // Regular users see only their own assigned tenders
+      assignedCount = tenders.filter(t => t.marketer && t.marketer.trim() === userName).length;
+    }
+  }
+  document.getElementById('sAssigned').textContent = assignedCount;
+}
+
+function getKnownUsers() {
+  if (knownUsers.length) return knownUsers;
+  // fallback: derive names from existing tender data
+  const uniqueMarketers = [...new Set(tenders.map(t => t.marketer).filter(Boolean).map(m => m.trim()))].sort();
+  return uniqueMarketers.map((name, i) => ({ id: `fallback-${i}`, email: '', full_name: name, role: 'user' }));
+}
+
+function buildMarketerOptions(selectedVal) {
+  const users = getKnownUsers();
+  let opts = '<option value="">— none —</option>';
+  users.forEach(u => {
+    const sel = u.full_name === selectedVal ? ' selected' : '';
+    opts += `<option value="${esc(u.full_name)}"${sel}>${esc(u.full_name)}</option>`;
+  });
+  // add legacy value if not in profiles list
+  if (selectedVal && !users.find(u => u.full_name === selectedVal)) {
+    opts += `<option value="${esc(selectedVal)}" selected>${esc(selectedVal)} (legacy)</option>`;
+  }
+  return opts;
+}
+
+function updateMarketerFilter() {
+  const sel = document.getElementById('filterMarketer');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">All marketers</option><option value="unassigned">Unassigned</option>';
+  getKnownUsers().forEach(u => {
+    const o = document.createElement('option');
+    o.value = u.full_name; o.textContent = u.full_name;
+    if (u.full_name === cur) o.selected = true;
+    sel.appendChild(o);
+  });
+}
+
+function getFiltered() {
+  const q = document.getElementById('search').value.toLowerCase();
+  const cat = document.getElementById('filterCat').value;
+  const urg = document.getElementById('filterUrgency').value;
+  const mkt = document.getElementById('filterMarketer').value;
+  const sta = document.getElementById('filterStatus').value;
+  return tenders.filter(t => {
+    if (q && !t.title.toLowerCase().includes(q) && !t.pe_name.toLowerCase().includes(q)) return false;
+    if (cat && t.category !== cat) return false;
+    if (urg && urgClass(t.days_left) !== urg) return false;
+    if (mkt === 'unassigned' && t.marketer && t.marketer.trim()) return false;
+    if (mkt && mkt !== 'unassigned' && t.marketer !== mkt) return false;
+    if (sta && t.ad_status !== sta) return false;
+    return true;
+  });
+}
+
+function sortRows(rows) {
+  return rows.sort((a, b) => {
+    let av = a[sortField], bv = b[sortField];
+    if (typeof av === 'string') av = av.toLowerCase();
+    if (typeof bv === 'string') bv = bv.toLowerCase();
+    if (av < bv) return -sortDir;
+    if (av > bv) return sortDir;
+    return 0;
+  });
+}
+
+function sortBy(field) {
+  if (sortField === field) sortDir *= -1;
+  else { sortField = field; sortDir = 1; }
+  document.querySelectorAll('thead th span[id^="sort_"]').forEach(el => el.textContent = '');
+  const el = document.getElementById('sort_'+field);
+  if (el) el.textContent = sortDir === 1 ? ' ▲' : ' ▼';
+  renderTable();
+}
+
+function renderTable() {
+  updateMarketerFilter();
+  const rows = sortRows(getFiltered());
+  updateStats(rows);
+  document.getElementById('countBadge').textContent = rows.length + ' of ' + tenders.length;
+  const wrap = document.getElementById('tableWrap');
+  if (!rows.length) {
+    wrap.innerHTML = '<div style="text-align:center;padding:60px 20px;color:var(--text-muted)">No tenders match the current filters.</div>';
+    return;
+  }
+  wrap.innerHTML = `<table id="tenderTable">
+    <thead><tr>
+      <th class="td-num">#</th>
+      <th class="sortable" onclick="sortBy('pe_name')">Procuring entity <span id="sort_pe_name"></span></th>
+      <th class="sortable" onclick="sortBy('title')">Tender title <span id="sort_title"></span></th>
+      <th class="sortable" onclick="sortBy('category')">Category <span id="sort_category"></span></th>
+      <th class="sortable" onclick="sortBy('end_date')">Closing date <span id="sort_end_date"></span></th>
+      <th class="sortable" onclick="sortBy('days_left')">Days left <span id="sort_days_left">${sortField==='days_left'?sortDir===1?'▲':'▼':''}</span></th>
+      <th>Marketer</th>
+      <th>Bid status</th>
+      <th>Notes</th>
+      <th class="td-actions"></th>
+    </tr></thead>
+    <tbody id="tbody"></tbody>
+  </table>`;
+  const tbody = document.getElementById('tbody');
+  rows.forEach((t, i) => {
+    const uc = urgClass(t.days_left);
+    const label = t.days_left < 0 ? 'Expired' : t.days_left + 'd';
+    const tr = document.createElement('tr');
+    if (uc === 'expired') tr.className = 'row-expired';
+    tr.innerHTML = `
+      <td class="td-num">${i+1}</td>
+      <td><div class="pe-name" title="${esc(t.pe_name)}">${esc(t.pe_name)}</div></td>
+      <td><div class="title-cell" title="${esc(t.title)}">${esc(t.title)}</div></td>
+      <td><span class="badge cat">${esc(t.category)}</span></td>
+      <td style="white-space:nowrap;font-size:12px;color:var(--text-muted)">${esc(t.end_date)}</td>
+      <td><span class="badge ${uc}">${label}</span></td>
+      <td class="edit-cell">
+        <select data-id="${t.id}" data-field="marketer" onchange="inlineUpdate(this)">
+          <option value="">— unassigned —</option>
+          ${knownUsers.map(u => `<option value="${esc(u.full_name)}"${t.marketer === u.full_name ? ' selected' : ''}>${esc(u.full_name)}</option>`).join('')}
+          ${t.marketer && !knownUsers.find(u => u.full_name === t.marketer) ? `<option value="${esc(t.marketer)}" selected>${esc(t.marketer)} (legacy)</option>` : ''}
+        </select>
+      </td>
+      <td class="edit-cell">
+        <select data-id="${t.id}" data-field="ad_status" onchange="inlineUpdate(this)">
+          <option value="">—</option>
+          ${['Watch','Identified','Qualified','Preparing','Submitted','Won','Lost','Withdrawn'].map(s=>`<option${t.ad_status===s?' selected':''}>${s}</option>`).join('')}
+        </select>
+      </td>
+      <td><input class="notes-input" type="text" value="${esc(t.notes||'')}" placeholder="Add note…" data-id="${t.id}" data-field="notes" onblur="inlineUpdate(this)"></td>
+      <td class="td-actions"><button class="btn" style="padding:4px 8px;font-size:11px" onclick="openEditModal('${t.id}')">✎</button></td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+async function inlineUpdate(el) {
+  const id = el.dataset.id;
+  const field = el.dataset.field;
+  const val = el.value;
+  const old = tenders.find(t => t.id === id);
+  if (!old || old[field] === val) return;
+  const updated = await updateTender(id, { [field]: val }, old);
+  if (updated) {
+    const idx = tenders.findIndex(t => t.id === id);
+    if (idx !== -1) tenders[idx] = { ...tenders[idx], [field]: val };
+    document.getElementById('lastSaved').textContent = 'Saved ' + tsNow();
+    toast('Saved', 'success');
+  }
+}
+
+// ══════════════════════════════════════════════
+//  TENDER MODAL
+// ══════════════════════════════════════════════
+function openAddModal() {
+  editingId = null;
+  document.getElementById('modalTitle').textContent = 'Add new tender';
+  document.getElementById('modalSub').textContent = 'Fill in the details to track a new tender.';
+  ['f_peName','f_title','f_endDate','f_notes'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('f_category').value = 'Medical/Health';
+  document.getElementById('f_adStatus').value = '';
+  const mktSel = document.getElementById('f_marketer');
+  mktSel.innerHTML = buildMarketerOptions('');
+  mktSel.value = '';
+  document.getElementById('btnDelete').style.display = 'none';
+  document.getElementById('btnSave').textContent = 'Add tender';
+  document.getElementById('tenderModal').classList.add('open');
+}
+
+function openEditModal(id) {
+  const t = tenders.find(x => x.id === id);
+  if (!t) return;
+  editingId = id;
+  document.getElementById('modalTitle').textContent = 'Edit tender';
+  document.getElementById('modalSub').textContent = t.pe_name;
+  document.getElementById('f_peName').value = t.pe_name || '';
+  document.getElementById('f_title').value = t.title || '';
+  document.getElementById('f_category').value = t.category || 'Medical/Health';
+  document.getElementById('f_endDate').value = t.end_date || '';
+  const mktSel = document.getElementById('f_marketer');
+  mktSel.innerHTML = buildMarketerOptions(t.marketer || '');
+  mktSel.value = t.marketer || '';
+  document.getElementById('f_adStatus').value = t.ad_status || '';
+  document.getElementById('f_notes').value = t.notes || '';
+  document.getElementById('btnDelete').style.display = 'inline-flex';
+  document.getElementById('btnSave').textContent = 'Save changes';
+  document.getElementById('tenderModal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('tenderModal').classList.remove('open');
+  editingId = null;
+}
+
+async function saveModal() {
+  const pe_name = document.getElementById('f_peName').value.trim();
+  const title = document.getElementById('f_title').value.trim();
+  const end_date = document.getElementById('f_endDate').value.trim();
+  if (!pe_name || !title || !end_date) { alert('PE name, title and closing date are required.'); return; }
+  const days_left = calcDays(end_date);
+  const btn = document.getElementById('btnSave');
+  btn.disabled = true;
+  if (editingId) {
+    const old = tenders.find(t => t.id === editingId);
+    const changes = { pe_name, title, end_date, days_left,
+      category: document.getElementById('f_category').value,
+      marketer: document.getElementById('f_marketer').value.trim(),
+      ad_status: document.getElementById('f_adStatus').value,
+      notes: document.getElementById('f_notes').value.trim() };
+    const updated = await updateTender(editingId, changes, old);
+    if (updated) { const idx = tenders.findIndex(t => t.id === editingId); if (idx !== -1) tenders[idx] = updated; toast('Tender updated', 'success'); }
+  } else {
+    const rec = { pe_name, title, end_date, days_left,
+      category: document.getElementById('f_category').value,
+      marketer: document.getElementById('f_marketer').value.trim(),
+      ad_status: document.getElementById('f_adStatus').value,
+      notes: document.getElementById('f_notes').value.trim() };
+    const added = await insertTender(rec);
+    if (added) { tenders.unshift(added); toast('Tender added', 'success'); }
+  }
+  btn.disabled = false;
+  document.getElementById('lastSaved').textContent = 'Saved ' + tsNow();
+  renderTable();
+  closeModal();
+}
+
+async function deleteFromModal() {
+  if (!editingId) return;
+  if (!confirm('Delete this tender? This cannot be undone.')) return;
+  const ok = await deleteTender(editingId);
+  if (ok) {
+    tenders = tenders.filter(t => t.id !== editingId);
+    toast('Tender deleted');
+    renderTable();
+    closeModal();
+  }
+}
+
+// ══════════════════════════════════════════════
+//  WEEK REFRESH + EXPORT
+// ══════════════════════════════════════════════
+async function weeklyRefresh() {
+  toast('Recalculating days…');
+  const updates = tenders.map(t => ({ id: t.id, days_left: calcDays(t.end_date) }));
+  for (const u of updates) {
+    await sb.from('tenders').update({ days_left: u.days_left }).eq('id', u.id);
+  }
+  await loadTenders();
+  toast('Days recalculated', 'success');
+}
+
+function exportCSV() {
+  const rows = getFiltered();
+  const hdr = ['#','PE Name','Tender Title','Category','Closing Date','Days Left','Marketer','Bid Status','Notes'];
+  const lines = [hdr.join(',')];
+  rows.forEach((t, i) => {
+    lines.push([i+1, q(t.pe_name), q(t.title), q(t.category), q(t.end_date), t.days_left, q(t.marketer), q(t.ad_status), q(t.notes)].join(','));
+  });
+  const blob = new Blob([lines.join('\n')], {type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'IMOTH_Tenders_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+}
+function q(s) { return '"' + String(s||'').replace(/"/g,'""') + '"'; }
+
+function clearFilters() {
+  ['search','filterCat','filterUrgency','filterMarketer','filterStatus'].forEach(id => {
+    const el = document.getElementById(id);
+    el.tagName === 'INPUT' ? el.value = '' : el.value = '';
+  });
+  renderTable();
+}
+
+async function upsertProfile(user) {
+  const meta = user.user_metadata || {};
+  const profile = {
+    id: user.id,
+    email: user.email,
+    full_name: meta.full_name || '',
+    role: meta.role || 'user'
+  };
+  const { error } = await sb.from('profiles').upsert(profile, { onConflict: 'id' });
+  if (error) {
+    if (error.code === 'PGRST205') {
+      console.warn('Profiles table not available yet; continuing without profile upsert.');
+      return;
+    }
+    console.error('Error upserting profile:', error);
+  }
+}
+async function loadProfiles() {
+  const { data, error } = await sb.from('profiles').select('*').order('full_name');
+  if (error) {
+    if (error.code === 'PGRST205') {
+      console.warn('Profiles table not available; falling back to tender marketer names.');
+      const uniqueMarketers = [...new Set(tenders.map(t => t.marketer).filter(Boolean).map(m => m.trim()))].sort();
+      knownUsers = uniqueMarketers.map((name, index) => ({ id: `fallback-${index}`, email: '', full_name: name, role: 'user' }));
+      renderUserTags(knownUsers);
+      return;
+    }
+    console.error('Error loading profiles:', error);
+    return;
+  }
+  knownUsers = data || [];
+  renderUserTags(knownUsers);
+}
+
+function renderUserTags(users) {
+  const list = document.getElementById('userTagList');
+  if (!users || !users.length) {
+    list.innerHTML = '<div style="padding:8px 12px;font-size:12px;color:var(--text-faint);text-align:center">No team members yet.</div>';
+    return;
+  }
+  
+  // Helper to get initials
+  const getInitials = (name) => {
+    return name.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase();
+  };
+  
+  list.innerHTML = users.map(u => {
+    const name = u.full_name || u.email || 'Unknown';
+    const role = u.role || 'user';
+    const email = u.email || '';
+    const initials = getInitials(name);
+    const isSelf = currentUser && u.id === currentUser.id;
+    const delBtn = !isSelf
+      ? `<button class="del-user-btn" onclick="deleteUser('${esc(u.id)}','${esc(name)}')" title="Remove">✕</button>`
+      : '';
+    return `<div class="user-tag">
+      <div class="user-tag-info">
+        <div class="user-avatar">${initials}</div>
+        <div class="user-details">
+          <div class="user-name">${esc(name)}</div>
+          <div class="user-email">${esc(email)}</div>
+        </div>
+      </div>
+      <div class="user-tag-actions">
+        <span class="role-pill ${role}">${role}</span>
+        ${delBtn}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openAddUserModal() {
+  ['nu_name','nu_email','nu_pass','nu_pass2'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('nu_role').value = 'user';
+  document.getElementById('userModalError').style.display = 'none';
+  document.getElementById('btnAddUser').disabled = false;
+  document.getElementById('btnAddUser').textContent = 'Add user';
+  document.getElementById('userModal').classList.add('open');
+}
+function closeUserModal() { document.getElementById('userModal').classList.remove('open'); }
+
+async function saveNewUser() {
+  const name    = document.getElementById('nu_name').value.trim();
+  const email   = document.getElementById('nu_email').value.trim();
+  const pass    = document.getElementById('nu_pass').value;
+  const pass2   = document.getElementById('nu_pass2').value;
+  const role    = document.getElementById('nu_role').value;
+  const errBox  = document.getElementById('userModalError');
+  const btn     = document.getElementById('btnAddUser');
+
+  errBox.style.display = 'none';
+  if (!name || !email || !pass) { errBox.textContent = 'All fields are required.'; errBox.style.display = 'block'; return; }
+  if (pass.length < 6)          { errBox.textContent = 'Password must be at least 6 characters.'; errBox.style.display = 'block'; return; }
+  if (pass !== pass2)           { errBox.textContent = 'Passwords do not match.'; errBox.style.display = 'block'; return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Creating…';
+
+  // Call backend instead of Supabase directly (avoids CORS issues)
+  try {
+    const response = await fetch(`${BACKEND_URL}/api/signup`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email,
+        password: pass,
+        full_name: name,
+        role
+      })
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.error || 'Signup failed');
+    }
+
+    toast(result.message || `${name} added successfully`, 'success');
+    closeUserModal();
+    await loadProfiles();
+
+  } catch (error) {
+    errBox.textContent = error.message;
+    errBox.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Add user';
+  }
+}
+
+async function deleteUser(uid, name) {
+  if (!confirm(`Remove ${name} from the team?\n\nThis removes their profile.`)) return;
+  const { error } = await sb.from('profiles').delete().eq('id', uid);
+  if (error) { toast('Error removing user', 'error'); return; }
+  knownUsers = knownUsers.filter(u => u.id !== uid);
+  renderUserTags(knownUsers);
+  toast(name + ' removed from team');
+}
+
+// ══════════════════════════════════════════════
+//  SEED (one-time — call seedDB() from console)
+// ══════════════════════════════════════════════
+async function seedDB() {
+  console.log('Seeding', SEED.length, 'tenders…');
+  const rows = SEED.map(t => ({
+    pe_name: t.peName,
+    title: t.title,
+    category: t.category,
+    end_date: t.endDate,
+    days_left: calcDays(t.endDate),
+    marketer: '',
+    ad_status: '',
+    notes: ''
+  }));
+  const chunkSize = 50;
+  for (let i = 0; i < rows.length; i += chunkSize) {
+    const { error } = await sb.from('tenders').insert(rows.slice(i, i + chunkSize));
+    if (error) { console.error('Seed error', error); return; }
+    console.log('Inserted rows', i, '—', Math.min(i+chunkSize, rows.length));
+  }
+  console.log('Seed complete!');
+  loadTenders();
+}
+
+// ══════════════════════════════════════════════
+//  BOOT
+// ══════════════════════════════════════════════
+window.onload = async () => {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) {
+    currentUser = session.user;
+    await initApp();
+  } else {
+    document.getElementById('loginScreen').classList.add('show');
+  }
+};
+</script>
+</body>
+</html>
