@@ -1,5 +1,3 @@
-
-
 import express from 'express';
 import cors from 'cors';
 import { createClient } from '@supabase/supabase-js';
@@ -26,12 +24,12 @@ const supabase = createClient(
 app.use(express.json());
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow CORS for localhost/127.0.0.1 (both variants)
     const allowedOrigins = [
       'http://localhost:8888',
       'http://127.0.0.1:8888',
       'http://localhost:3000',
-      'http://127.0.0.1:3000'
+      'http://127.0.0.1:3000',
+      'http://188.166.28.156'
     ];
     
     if (!origin || allowedOrigins.includes(origin)) {
@@ -82,12 +80,12 @@ app.post('/api/signup', async (req, res) => {
       });
     }
 
-    // Create user in Supabase Auth (using service role key for full control)
+    // Create user in Supabase Auth
     const { data, error } = await supabase.auth.admin.createUser({
       email,
       password,
       user_metadata: { full_name, role },
-      email_confirm: true  // Auto-confirm so they can sign in immediately
+      email_confirm: true
     });
 
     if (error) {
@@ -115,7 +113,6 @@ app.post('/api/signup', async (req, res) => {
       return res.status(400).json({ error: profileError.message });
     }
 
-    // Return success (don't send password back)
     res.json({
       success: true,
       message: `User ${full_name} created successfully`,
@@ -133,6 +130,51 @@ app.post('/api/signup', async (req, res) => {
 });
 
 // ══════════════════════════════════════════════════════
+//  DELETE USER ENDPOINT
+// ══════════════════════════════════════════════════════
+app.delete('/api/users/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({ error: 'User ID is required' });
+    }
+
+    console.log('🗑️ Delete request for user:', id);
+
+    // Delete from Supabase Auth (this also cascades to profiles if FK is set up)
+    const { error: authError } = await supabase.auth.admin.deleteUser(id);
+
+    if (authError) {
+      console.error('❌ Auth delete error:', authError.message);
+      return res.status(400).json({ error: `Auth delete error: ${authError.message}` });
+    }
+
+    // Also delete profile row explicitly (in case there's no cascade)
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .delete()
+      .eq('id', id);
+
+    if (profileError) {
+      console.error('⚠️ Profile delete error (auth user already deleted):', profileError.message);
+      // Don't fail the request — auth user is already gone
+    }
+
+    console.log('✅ User deleted:', id);
+
+    res.json({
+      success: true,
+      message: 'User deleted successfully'
+    });
+
+  } catch (err) {
+    console.error('Server error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ══════════════════════════════════════════════════════
 //  START SERVER
 // ══════════════════════════════════════════════════════
 app.listen(PORT, () => {
@@ -140,9 +182,6 @@ app.listen(PORT, () => {
   ╔════════════════════════════════════════════════════╗
   ║  IMOTH TENDERS BACKEND                             ║
   ║  Running on http://localhost:${PORT}                     ║
-  ║                                        ║
-  ║                                     ║
-  ║                                ║
   ╚════════════════════════════════════════════════════╝
   `);
 });

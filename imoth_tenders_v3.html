@@ -2,7 +2,6 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<link rel="icon" type="image/png" href="favicon.jpeg">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>IMOTH Tenders Tracker</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -65,7 +64,7 @@ body{font-family:system-ui,-apple-system,sans-serif;font-size:14px;background:va
 .nav-tab:hover:not(.active){color:var(--text)}
 
 /* ── STATS BAR ── */
-.stats-bar{background:var(--surface);border-bottom:0.5px solid var(--border);padding:14px 24px;display:flex;gap:10px;flex-wrap:wrap;flex-shrink:0}
+.stats-bar{background:var(--surface);border-bottom:0.5px solid var(--border);padding:14px 24px;display:flex;gap:10px;flex-wrap:wrap}
 .stat-card{background:var(--bg);border-radius:var(--radius);padding:10px 16px;min-width:110px;flex:1;border:0.5px solid var(--border-light)}
 .stat-val{font-size:24px;font-weight:600;line-height:1}
 .stat-lbl{font-size:10px;color:var(--text-muted);margin-top:3px;text-transform:uppercase;letter-spacing:.5px}
@@ -75,7 +74,7 @@ body{font-family:system-ui,-apple-system,sans-serif;font-size:14px;background:va
 .stat-card.c-blue .stat-val{color:var(--primary)}
 
 /* ── CONTROLS ── */
-.controls{padding:12px 24px;background:var(--surface);border-bottom:0.5px solid var(--border);display:flex;gap:8px;flex-wrap:wrap;align-items:center;flex-shrink:0}
+.controls{padding:12px 24px;background:var(--surface);border-bottom:0.5px solid var(--border);display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .search-wrap{position:relative;flex:1;min-width:200px}
 .search-wrap svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text-faint);pointer-events:none}
 .search-wrap input{width:100%;border:1px solid var(--border);border-radius:var(--radius);padding:7px 12px 7px 34px;font-size:13px;outline:none;color:var(--text);background:var(--surface)}
@@ -93,9 +92,9 @@ body{font-family:system-ui,-apple-system,sans-serif;font-size:14px;background:va
 .count-badge{font-size:12px;color:var(--text-muted);padding:4px 10px;background:var(--bg);border-radius:20px;border:0.5px solid var(--border)}
 
 /* ── TABLE ── */
-.table-wrap{overflow-x:auto;overflow-y:auto;background:var(--surface);flex:1;min-height:0}
+.table-wrap{overflow-x:auto;background:var(--surface)}
 table{width:100%;border-collapse:collapse;font-size:13px}
-thead th{background:var(--bg);padding:10px 12px;text-align:left;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);border-bottom:0.5px solid var(--border);white-space:nowrap;position:sticky;top:0;z-index:2}
+thead th{background:var(--bg);padding:10px 12px;text-align:left;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);border-bottom:0.5px solid var(--border);white-space:nowrap;position:sticky;top:56px;z-index:2}
 thead th.sortable{cursor:pointer;user-select:none}
 thead th.sortable:hover{color:var(--text)}
 tbody tr{border-bottom:0.5px solid var(--border-light);transition:background .1s}
@@ -134,31 +133,19 @@ tbody td{padding:9px 12px;vertical-align:middle}
 .logout-btn:hover{background:var(--red-bg);color:var(--red);border-color:var(--red-border)}
 
 /* ── ADMIN PANEL ── */
-.admin-bar{background:var(--primary-light);border-bottom:0.5px solid #b5d4f4;padding:12px 24px;display:none;flex-direction:column;gap:8px}
+.admin-bar{background:var(--primary-light);border-bottom:0.5px solid #b5d4f4;padding:10px 24px;display:none;align-items:center;gap:12px;flex-wrap:wrap}
 .admin-bar.show{display:flex}
-.admin-bar-header{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .admin-bar-label{font-size:11px;font-weight:600;color:var(--primary);text-transform:uppercase;letter-spacing:.4px}
-.admin-bar-actions{display:flex;gap:8px;align-items:center}
-
-/* Team members list (improved) */
-.user-tags{display:flex;flex-direction:column;gap:0;background:var(--surface);border:0.5px solid #b5d4f4;border-radius:6px;overflow:hidden;max-height:150px;overflow-y:auto;margin:4px 0}
-.user-tag{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:0.5px solid #ebebeb;font-size:13px;gap:12px}
-.user-tag:last-child{border-bottom:none}
-.user-tag:hover{background:var(--bg)}
-.user-tag-info{display:flex;align-items:center;gap:8px;flex:1;min-width:0}
-.user-avatar{width:32px;height:32px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;flex-shrink:0}
-.user-details{display:flex;flex-direction:column;gap:1px;min-width:0;flex:1}
-.user-name{font-size:13px;font-weight:500;color:var(--text)}
-.user-email{font-size:11px;color:var(--text-muted);text-overflow:ellipsis;white-space:nowrap;overflow:hidden}
-.user-tag-actions{display:flex;align-items:center;gap:8px;flex-shrink:0}
-.role-pill{font-size:10px;padding:2px 6px;border-radius:3px;font-weight:600;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap}
+.user-tags{display:flex;gap:6px;flex-wrap:wrap;flex:1}
+.user-tag{display:flex;align-items:center;gap:5px;background:var(--surface);border:0.5px solid #b5d4f4;border-radius:6px;padding:4px 10px;font-size:12px}
+.role-pill{font-size:9px;padding:1px 6px;border-radius:3px;font-weight:600;text-transform:uppercase;letter-spacing:.3px}
 .role-pill.admin{background:var(--primary-light);color:var(--primary)}
 .role-pill.user{background:var(--green-bg);color:var(--green)}
-.del-user-btn{background:none;border:none;color:var(--text-faint);cursor:pointer;font-size:14px;line-height:1;padding:2px 4px;display:flex;align-items:center;transition:color .15s}
+.del-user-btn{background:none;border:none;color:var(--text-faint);cursor:pointer;font-size:14px;line-height:1;padding:0 2px;display:flex;align-items:center}
 .del-user-btn:hover{color:var(--red)}
 
 /* ── FOOTER ── */
-.app-footer{background:var(--surface);border-top:0.5px solid var(--border);padding:10px 24px;display:flex;align-items:center;gap:12px;font-size:11px;color:var(--text-muted);flex-shrink:0}
+.app-footer{background:var(--surface);border-top:0.5px solid var(--border);padding:10px 24px;display:flex;align-items:center;gap:12px;font-size:11px;color:var(--text-muted)}
 .legend{display:flex;gap:14px;flex-wrap:wrap}
 .legend-item{display:flex;align-items:center;gap:5px}
 .dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
@@ -171,10 +158,10 @@ tbody td{padding:9px 12px;vertical-align:middle}
 
 /* ── VIEWS ── */
 .view{display:none}
-.view.active{display:flex;flex-direction:column;height:calc(100vh - 56px);overflow:hidden}
+.view.active{display:block}
 
 /* ── AUDIT LOG ── */
-.audit-wrap{padding:24px;max-width:900px;margin:0 auto;overflow-y:auto;flex:1;min-height:0}
+.audit-wrap{padding:24px;max-width:900px;margin:0 auto}
 .audit-header{margin-bottom:20px}
 .audit-header h2{font-size:18px;font-weight:600;margin-bottom:4px}
 .audit-header p{font-size:13px;color:var(--text-muted)}
@@ -290,11 +277,9 @@ tbody td{padding:9px 12px;vertical-align:middle}
 
   <!-- ADMIN BAR -->
   <div class="admin-bar" id="adminBar">
-    <div class="admin-bar-header">
-      <span class="admin-bar-label">👥 Team Members</span>
-      <button class="btn" onclick="openAddUserModal()" style="padding:4px 10px;font-size:12px">+ Add</button>
-    </div>
+    <span class="admin-bar-label">Team</span>
     <div class="user-tags" id="userTagList"></div>
+    <button class="btn" onclick="openAddUserModal()">+ Add user</button>
   </div>
 
   <!-- ADD USER MODAL -->
@@ -302,13 +287,11 @@ tbody td{padding:9px 12px;vertical-align:middle}
     <div class="modal">
       <div class="modal-header">
         <div class="modal-title">Add team member</div>
-        <div class="modal-sub">Creates their account. They can sign in immediately.</div>
+        <div class="modal-sub">They can sign in immediately after being added.</div>
       </div>
-      <div id="userModalError" style="display:none;background:var(--red-bg);color:var(--red);border:1px solid var(--red-border);border-radius:var(--radius);padding:9px 13px;font-size:13px;margin-bottom:14px"></div>
       <div class="modal-field"><label>Full name</label><input type="text" id="nu_name" placeholder="e.g. Jane Wanjiku"></div>
       <div class="modal-field"><label>Email address</label><input type="email" id="nu_email" placeholder="e.g. jane@imoth.co.ke"></div>
-      <div class="modal-field"><label>Password</label><input type="password" id="nu_pass" placeholder="Min 6 characters"></div>
-      <div class="modal-field"><label>Confirm password</label><input type="password" id="nu_pass2" placeholder="Repeat password"></div>
+      <div class="modal-field"><label>Password</label><input type="password" id="nu_pass" placeholder="Set a password"></div>
       <div class="modal-field"><label>Role</label>
         <select id="nu_role">
           <option value="user">Marketer — view and edit tenders</option>
@@ -317,7 +300,7 @@ tbody td{padding:9px 12px;vertical-align:middle}
       </div>
       <div class="modal-actions">
         <button class="btn" onclick="closeUserModal()">Cancel</button>
-        <button class="btn primary" id="btnAddUser" onclick="saveNewUser()">Add user</button>
+        <button class="btn primary" onclick="saveNewUser()">Add user</button>
       </div>
     </div>
   </div>
@@ -331,9 +314,6 @@ tbody td{padding:9px 12px;vertical-align:middle}
       <div class="stat-card c-green"><div class="stat-val" id="sOk">—</div><div class="stat-lbl">Future 60d+</div></div>
       <div class="stat-card"><div class="stat-val" id="sTotal">—</div><div class="stat-lbl">Total active</div></div>
       <div class="stat-card c-blue"><div class="stat-val" id="sAssigned">—</div><div class="stat-lbl">Assigned</div></div>
-      <div class="stat-card c-blue">
-      <div class="stat-val" id="statSubmitted">0</div><div class="stat-lbl">Submitted</div></div>
-      <div class="stat-card c-green"><div class="stat-val" id="statWon">0</div><div class="stat-lbl">Won</div></div>
     </div>
 
     <div class="controls">
@@ -444,7 +424,6 @@ tbody td{padding:9px 12px;vertical-align:middle}
 // ══════════════════════════════════════════════
 const SUPABASE_URL = 'https://gtmpznatlmwowrmtohcp.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd0bXB6bmF0bG13b3dybXRvaGNwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwODE2NTEsImV4cCI6MjA5MTY1NzY1MX0.Q1mSk_j7PrqKjfdp3Q7SbwDbM3dbE7aLIsptJVpY5nc';
-const BACKEND_URL = 'http://localhost:3000'; 
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -577,13 +556,8 @@ async function loadTenders() {
 }
 
 async function insertTender(t) {
-  console.log('📝 Inserting tender:', t);
   const { data, error } = await sb.from('tenders').insert([t]).select().single();
-  if (error) { 
-    console.error('❌ Insert error:', error);
-    toast(`Error saving tender: ${error.message}`, 'error'); 
-    return null; 
-  }
+  if (error) { toast('Error saving tender', 'error'); return null; }
   await logAudit('created', data, null, data);
   return data;
 }
@@ -692,45 +666,13 @@ function updateStats(rows) {
   document.getElementById('sUpcoming').textContent = rows.filter(t => t.days_left > 30 && t.days_left <= 60).length;
   document.getElementById('sOk').textContent = rows.filter(t => t.days_left > 60).length;
   document.getElementById('sTotal').textContent = rows.filter(t => t.days_left >= 0).length;
-  document.getElementById('statSubmitted').textContent = tenders.filter(t => t.ad_status?.toLowerCase() === 'submitted').length;
-  document.getElementById('statWon').textContent = tenders.filter(t => t.ad_status?.toLowerCase() === 'won').length;
-  
-  // For assigned count: admins see all assigned, users see only their own
-  let assignedCount = 0;
-  if (currentUser) {
-    const userRole = currentUser.user_metadata?.role || 'user';
-    const userName = currentUser.user_metadata?.full_name || currentUser.email?.split('@')[0] || '';
-    
-    if (userRole === 'admin') {
-      // Admins see all assigned tenders
-      assignedCount = tenders.filter(t => t.marketer && t.marketer.trim()).length;
-    } else {
-      // Regular users see only their own assigned tenders
-      assignedCount = tenders.filter(t => t.marketer && t.marketer.trim() === userName).length;
-    }
-  }
-  document.getElementById('sAssigned').textContent = assignedCount;
+  document.getElementById('sAssigned').textContent = tenders.filter(t => t.marketer && t.marketer.trim()).length;
 }
 
 function getKnownUsers() {
   if (knownUsers.length) return knownUsers;
-  // fallback: derive names from existing tender data
   const uniqueMarketers = [...new Set(tenders.map(t => t.marketer).filter(Boolean).map(m => m.trim()))].sort();
-  return uniqueMarketers.map((name, i) => ({ id: `fallback-${i}`, email: '', full_name: name, role: 'user' }));
-}
-
-function buildMarketerOptions(selectedVal) {
-  const users = getKnownUsers();
-  let opts = '<option value="">— none —</option>';
-  users.forEach(u => {
-    const sel = u.full_name === selectedVal ? ' selected' : '';
-    opts += `<option value="${esc(u.full_name)}"${sel}>${esc(u.full_name)}</option>`;
-  });
-  // add legacy value if not in profiles list
-  if (selectedVal && !users.find(u => u.full_name === selectedVal)) {
-    opts += `<option value="${esc(selectedVal)}" selected>${esc(selectedVal)} (legacy)</option>`;
-  }
-  return opts;
+  return uniqueMarketers.map((name, index) => ({ id: `fallback-${index}`, email: '', full_name: name, role: 'user' }));
 }
 
 function updateMarketerFilter() {
@@ -822,9 +764,8 @@ function renderTable() {
       <td><span class="badge ${uc}">${label}</span></td>
       <td class="edit-cell">
         <select data-id="${t.id}" data-field="marketer" onchange="inlineUpdate(this)">
-          <option value="">— unassigned —</option>
-          ${knownUsers.map(u => `<option value="${esc(u.full_name)}"${t.marketer === u.full_name ? ' selected' : ''}>${esc(u.full_name)}</option>`).join('')}
-          ${t.marketer && !knownUsers.find(u => u.full_name === t.marketer) ? `<option value="${esc(t.marketer)}" selected>${esc(t.marketer)} (legacy)</option>` : ''}
+          <option value="">—</option>
+          ${getKnownUsers().map(u => `<option${t.marketer === u.full_name ? ' selected' : ''}>${esc(u.full_name)}</option>`).join('')}
         </select>
       </td>
       <td class="edit-cell">
@@ -865,7 +806,7 @@ function openAddModal() {
   document.getElementById('f_category').value = 'Medical/Health';
   document.getElementById('f_adStatus').value = '';
   const mktSel = document.getElementById('f_marketer');
-  mktSel.innerHTML = buildMarketerOptions('');
+  mktSel.innerHTML = '<option value="">— none —</option>' + getKnownUsers().map(u => `<option>${esc(u.full_name)}</option>`).join('');
   mktSel.value = '';
   document.getElementById('btnDelete').style.display = 'none';
   document.getElementById('btnSave').textContent = 'Add tender';
@@ -883,7 +824,7 @@ function openEditModal(id) {
   document.getElementById('f_category').value = t.category || 'Medical/Health';
   document.getElementById('f_endDate').value = t.end_date || '';
   const mktSel = document.getElementById('f_marketer');
-  mktSel.innerHTML = buildMarketerOptions(t.marketer || '');
+  mktSel.innerHTML = '<option value="">— none —</option>' + getKnownUsers().map(u => `<option>${esc(u.full_name)}</option>`).join('');
   mktSel.value = t.marketer || '';
   document.getElementById('f_adStatus').value = t.ad_status || '';
   document.getElementById('f_notes').value = t.notes || '';
@@ -1011,113 +952,66 @@ async function loadProfiles() {
   renderUserTags(knownUsers);
 }
 
-function renderUserTags(users) {
-  const list = document.getElementById('userTagList');
-  if (!users || !users.length) {
-    list.innerHTML = '<div style="padding:8px 12px;font-size:12px;color:var(--text-faint);text-align:center">No team members yet.</div>';
+async function loadUsers() {
+  if (!sb.auth.admin) {
+    console.warn('auth.admin is not available in the browser client.');
     return;
   }
-  
-  // Helper to get initials
-  const getInitials = (name) => {
-    return name.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase();
-  };
-  
-  list.innerHTML = users.map(u => {
+  const { data } = await sb.auth.admin.listUsers() || {};
+  if (!data) return;
+  renderUserTags(data.users || []);
+}
+
+function renderUserTags(users) {
+  const list = document.getElementById('userTagList');
+  list.innerHTML = (users||[]).map(u => {
     const name = u.full_name || u.email || 'Unknown';
     const role = u.role || 'user';
-    const email = u.email || '';
-    const initials = getInitials(name);
-    const isSelf = currentUser && u.id === currentUser.id;
-    const delBtn = !isSelf
-      ? `<button class="del-user-btn" onclick="deleteUser('${esc(u.id)}','${esc(name)}')" title="Remove">✕</button>`
-      : '';
+    const emailLine = u.email ? `<span style="color:var(--text-faint);font-size:11px">@${esc(u.email)}</span>` : '';
+    const deleteButton = sb.auth.admin ? `<button class="del-user-btn" onclick="deleteUser('${esc(u.id)}')" title="Remove">✕</button>` : '';
     return `<div class="user-tag">
-      <div class="user-tag-info">
-        <div class="user-avatar">${initials}</div>
-        <div class="user-details">
-          <div class="user-name">${esc(name)}</div>
-          <div class="user-email">${esc(email)}</div>
-        </div>
-      </div>
-      <div class="user-tag-actions">
-        <span class="role-pill ${role}">${role}</span>
-        ${delBtn}
-      </div>
+      <span>${esc(name)}</span>
+      ${emailLine}
+      <span class="role-pill ${role}">${role}</span>
+      ${deleteButton}
     </div>`;
   }).join('');
 }
 
 function openAddUserModal() {
-  ['nu_name','nu_email','nu_pass','nu_pass2'].forEach(id => document.getElementById(id).value = '');
+  ['nu_name','nu_email','nu_pass'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('nu_role').value = 'user';
-  document.getElementById('userModalError').style.display = 'none';
-  document.getElementById('btnAddUser').disabled = false;
-  document.getElementById('btnAddUser').textContent = 'Add user';
   document.getElementById('userModal').classList.add('open');
 }
 function closeUserModal() { document.getElementById('userModal').classList.remove('open'); }
 
 async function saveNewUser() {
-  const name    = document.getElementById('nu_name').value.trim();
-  const email   = document.getElementById('nu_email').value.trim();
-  const pass    = document.getElementById('nu_pass').value;
-  const pass2   = document.getElementById('nu_pass2').value;
-  const role    = document.getElementById('nu_role').value;
-  const errBox  = document.getElementById('userModalError');
-  const btn     = document.getElementById('btnAddUser');
-
-  errBox.style.display = 'none';
-  if (!name || !email || !pass) { errBox.textContent = 'All fields are required.'; errBox.style.display = 'block'; return; }
-  if (pass.length < 6)          { errBox.textContent = 'Password must be at least 6 characters.'; errBox.style.display = 'block'; return; }
-  if (pass !== pass2)           { errBox.textContent = 'Passwords do not match.'; errBox.style.display = 'block'; return; }
-
-  btn.disabled = true;
-  btn.textContent = 'Creating…';
-
-  // Call backend instead of Supabase directly (avoids CORS issues)
-  try {
-    const response = await fetch(`${BACKEND_URL}/api/signup`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email,
-        password: pass,
-        full_name: name,
-        role
-      })
-    });
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(result.error || 'Signup failed');
-    }
-
-    toast(result.message || `${name} added successfully`, 'success');
-    closeUserModal();
-    await loadProfiles();
-
-  } catch (error) {
-    errBox.textContent = error.message;
-    errBox.style.display = 'block';
-  } finally {
-    btn.disabled = false;
-    btn.textContent = 'Add user';
+  const name = document.getElementById('nu_name').value.trim();
+  const email = document.getElementById('nu_email').value.trim();
+  const pass = document.getElementById('nu_pass').value;
+  const role = document.getElementById('nu_role').value;
+  if (!name || !email || !pass) { alert('All fields are required.'); return; }
+  if (!sb.auth.admin) {
+    alert('Cannot create auth user from the browser. Use a secure server-side endpoint or Supabase Edge Function with service-role access.');
+    return;
   }
+  const { error } = await sb.auth.admin.createUser({ email, password: pass, user_metadata: { full_name: name, role }, email_confirm: true }) || {};
+  if (error) { alert('Error: ' + error.message); return; }
+  toast(name + ' added', 'success');
+  closeUserModal();
+  await loadProfiles();
 }
 
-async function deleteUser(uid, name) {
-  if (!confirm(`Remove ${name} from the team?\n\nThis will fully delete their account.`)) return;
-
-  const response = await fetch(`${BACKEND_URL}/api/users/${uid}`, { method: 'DELETE' });
-  const result = await response.json();
-
-  if (!response.ok) { toast('Error removing user: ' + result.error, 'error'); return; }
-
-  knownUsers = knownUsers.filter(u => u.id !== uid);
-  renderUserTags(knownUsers);
-  toast(name + ' removed from team', 'success');
+async function deleteUser(uid) {
+  if (!sb.auth.admin) {
+    alert('Cannot delete auth user from the browser. Use a secure server-side endpoint with service-role access.');
+    return;
+  }
+  if (!confirm('Remove this user?')) return;
+  const { error } = await sb.auth.admin.deleteUser(uid) || {};
+  if (error) { alert('Error: ' + error.message); return; }
+  toast('User removed');
+  await loadProfiles();
 }
 
 // ══════════════════════════════════════════════
