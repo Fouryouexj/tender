@@ -29,7 +29,8 @@ app.use(cors({
       'http://127.0.0.1:8888',
       'http://localhost:3000',
       'http://127.0.0.1:3000',
-      'http://188.166.28.156'
+      'http://188.166.28.156',
+      'https://imothtender-production.up.railway.app'
     ];
     
     if (!origin || allowedOrigins.includes(origin)) {
