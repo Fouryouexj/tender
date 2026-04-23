@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <link rel="icon" type="image/png" href="favicon.jpeg">
+<link rel="icon" type="image/jpeg" href="https://imothtender101.vercel.app/favicon.jpeg">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>IMOTH Tenders Tracker</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -419,6 +420,7 @@ tbody td{padding:9px 12px;vertical-align:middle}
     </div>
     <div class="modal-field"><label>Closing date (e.g. 30 Jun 2026)</label><input type="text" id="f_endDate"></div>
     <div class="modal-field"><label>Assigned marketer</label><select id="f_marketer"><option value="">— none —</option></select></div>
+    <div class="modal-field"><label>Proposed by</label><input type="text" id="f_proposedBy" placeholder="e.g. Jane Wanjiku"></div>
     <div class="modal-field"><label>Bid status</label>
       <select id="f_adStatus">
         <option value="">— none —</option>
@@ -444,7 +446,7 @@ tbody td{padding:9px 12px;vertical-align:middle}
 // ══════════════════════════════════════════════
 const SUPABASE_URL = 'https://gtmpznatlmwowrmtohcp.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd0bXB6bmF0bG13b3dybXRvaGNwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwODE2NTEsImV4cCI6MjA5MTY1NzY1MX0.Q1mSk_j7PrqKjfdp3Q7SbwDbM3dbE7aLIsptJVpY5nc';
-const BACKEND_URL = 'https://imothtender-production.up.railway.app'; 
+const BACKEND_URL = 'https://188.166.28.156'; 
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -801,6 +803,7 @@ function renderTable() {
       <th class="sortable" onclick="sortBy('end_date')">Closing date <span id="sort_end_date"></span></th>
       <th class="sortable" onclick="sortBy('days_left')">Days left <span id="sort_days_left">${sortField==='days_left'?sortDir===1?'▲':'▼':''}</span></th>
       <th>Marketer</th>
+      <th>Proposed by</th>
       <th>Bid status</th>
       <th>Notes</th>
       <th class="td-actions"></th>
@@ -827,6 +830,7 @@ function renderTable() {
           ${t.marketer && !knownUsers.find(u => u.full_name === t.marketer) ? `<option value="${esc(t.marketer)}" selected>${esc(t.marketer)} (legacy)</option>` : ''}
         </select>
       </td>
+      <td class="edit-cell"><input class="notes-input" type="text" value="${esc(t.proposed_by||'')}" placeholder="Proposed by…" data-id="${t.id}" data-field="proposed_by" onblur="inlineUpdate(this)"></td>
       <td class="edit-cell">
         <select data-id="${t.id}" data-field="ad_status" onchange="inlineUpdate(this)">
           <option value="">—</option>
@@ -861,7 +865,7 @@ function openAddModal() {
   editingId = null;
   document.getElementById('modalTitle').textContent = 'Add new tender';
   document.getElementById('modalSub').textContent = 'Fill in the details to track a new tender.';
-  ['f_peName','f_title','f_endDate','f_notes'].forEach(id => document.getElementById(id).value = '');
+  ['f_peName','f_title','f_endDate','f_notes','f_proposedBy'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('f_category').value = 'Medical/Health';
   document.getElementById('f_adStatus').value = '';
   const mktSel = document.getElementById('f_marketer');
@@ -887,6 +891,7 @@ function openEditModal(id) {
   mktSel.value = t.marketer || '';
   document.getElementById('f_adStatus').value = t.ad_status || '';
   document.getElementById('f_notes').value = t.notes || '';
+  document.getElementById('f_proposedBy').value = t.proposed_by || '';
   document.getElementById('btnDelete').style.display = 'inline-flex';
   document.getElementById('btnSave').textContent = 'Save changes';
   document.getElementById('tenderModal').classList.add('open');
@@ -910,6 +915,7 @@ async function saveModal() {
     const changes = { pe_name, title, end_date, days_left,
       category: document.getElementById('f_category').value,
       marketer: document.getElementById('f_marketer').value.trim(),
+      proposed_by: document.getElementById('f_proposedBy').value.trim(),
       ad_status: document.getElementById('f_adStatus').value,
       notes: document.getElementById('f_notes').value.trim() };
     const updated = await updateTender(editingId, changes, old);
@@ -918,6 +924,7 @@ async function saveModal() {
     const rec = { pe_name, title, end_date, days_left,
       category: document.getElementById('f_category').value,
       marketer: document.getElementById('f_marketer').value.trim(),
+      proposed_by: document.getElementById('f_proposedBy').value.trim(),
       ad_status: document.getElementById('f_adStatus').value,
       notes: document.getElementById('f_notes').value.trim() };
     const added = await insertTender(rec);
@@ -956,10 +963,10 @@ async function weeklyRefresh() {
 
 function exportCSV() {
   const rows = getFiltered();
-  const hdr = ['#','PE Name','Tender Title','Category','Closing Date','Days Left','Marketer','Bid Status','Notes'];
+  const hdr = ['#','PE Name','Tender Title','Category','Closing Date','Days Left','Marketer','Proposed by','Bid Status','Notes'];
   const lines = [hdr.join(',')];
   rows.forEach((t, i) => {
-    lines.push([i+1, q(t.pe_name), q(t.title), q(t.category), q(t.end_date), t.days_left, q(t.marketer), q(t.ad_status), q(t.notes)].join(','));
+    lines.push([i+1, q(t.pe_name), q(t.title), q(t.category), q(t.end_date), t.days_left, q(t.marketer), q(t.proposed_by), q(t.ad_status), q(t.notes)].join(','));
   });
   const blob = new Blob([lines.join('\n')], {type:'text/csv'});
   const a = document.createElement('a');
@@ -1132,6 +1139,7 @@ async function seedDB() {
     end_date: t.endDate,
     days_left: calcDays(t.endDate),
     marketer: '',
+    proposed_by: '',
     ad_status: '',
     notes: ''
   }));
