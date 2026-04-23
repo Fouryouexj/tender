@@ -470,17 +470,27 @@ const SEED = [{"id":"160","title":"Group Life, Last Expense, Medical, Motor, Pro
 // ══════════════════════════════════════════════
 function calcDays(endDate) {
   try {
+    // Always compare date-only (midnight local time) to avoid time-of-day skew
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
     const d = new Date(endDate);
     if (isNaN(d)) {
       const months = {jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
       const parts = endDate.trim().split(/\s+/);
       if (parts.length === 3) {
         const m = months[parts[1].toLowerCase().slice(0,3)];
-        if (m !== undefined) return Math.round((new Date(+parts[2],m,+parts[0]) - new Date()) / 86400000);
+        if (m !== undefined) {
+          const closing = new Date(+parts[2], m, +parts[0]);
+          closing.setHours(0, 0, 0, 0);
+          return Math.round((closing - today) / 86400000);
+        }
       }
       return 0;
     }
-    return Math.round((d - new Date()) / 86400000);
+    // For ISO dates (YYYY-MM-DD), parse as local midnight to avoid UTC offset shifting the day
+    const closing = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    return Math.round((closing - today) / 86400000);
   } catch(e) { return 0; }
 }
 
