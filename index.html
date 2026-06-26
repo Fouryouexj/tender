@@ -419,6 +419,7 @@ tbody td{padding:9px 12px;vertical-align:middle}
       </select>
       <div class="controls-right">
         <span class="count-badge" id="clientCountBadge"></span>
+        <button class="btn" onclick="exportClientsCSV()">Export CSV</button>
         <button class="btn primary" onclick="openAddClientModal()">+ Add client</button>
       </div>
     </div>
@@ -1433,15 +1434,29 @@ async function weeklyRefresh() {
 
 function exportCSV() {
   const rows = getFiltered();
-  const hdr = ['#','PE Name','Tender Title','Category','Closing Date','Days Left','Marketer','Proposed by','Bid Status','Notes'];
+  const hdr = ['#','PE Name','Tender Title','Category','Closing Date','Days Left','Marketer','Proposed by','Bid Status','Chance of Closing','Amount Quoted','Underwriter','Tender Document','Notes'];
   const lines = [hdr.join(',')];
   rows.forEach((t, i) => {
-    lines.push([i+1, q(t.pe_name), q(t.title), q(t.category), q(t.end_date), t.days_left, q(t.marketer), q(t.proposed_by), q(t.ad_status), q(t.notes)].join(','));
+    lines.push([i+1, q(t.pe_name), q(t.title), q(t.category), q(t.end_date), t.days_left, q(t.marketer), q(t.proposed_by), q(t.ad_status), q(t.chance_of_closing), t.amount_quoted||0, q(t.underwriter), q(t.tender_document_url), q(t.notes)].join(','));
   });
   const blob = new Blob([lines.join('\n')], {type:'text/csv'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = 'IMOTH_Tenders_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+}
+
+function exportClientsCSV() {
+  const rows = getFilteredClients();
+  const hdr = ['#','Client Name','Source','Policy Type','Underwriter','Policy Number','Cover Start','Cover Expiry','Premium Amount','Status','Contact Person','Contact Phone','Contact Email','Notes'];
+  const lines = [hdr.join(',')];
+  rows.forEach((c, i) => {
+    lines.push([i+1, q(c.client_name), q(c.source), q(c.policy_type), q(c.underwriter), q(c.policy_number), q(c.cover_start), q(c.cover_expiry), c.premium_amount||0, q(clientStatus(c)), q(c.contact_person), q(c.contact_phone), q(c.contact_email), q(c.notes)].join(','));
+  });
+  const blob = new Blob([lines.join('\n')], {type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'IMOTH_Clients_' + new Date().toISOString().slice(0,10) + '.csv';
   a.click();
 }
 function q(s) { return '"' + String(s||'').replace(/"/g,'""') + '"'; }
