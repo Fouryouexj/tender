@@ -103,7 +103,7 @@ tbody tr{border-bottom:0.5px solid var(--border-light);transition:background .1s
 tbody tr:hover{background:#fafaf9}
 tbody td{padding:9px 12px;vertical-align:middle}
 .td-num{text-align:right;color:var(--text-faint);font-size:11px;width:36px}
-.td-actions{width:40px}
+.td-actions{width:auto;min-width:40px}
 
 /* ── BADGES ── */
 .badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:500;white-space:nowrap;line-height:1.4}
@@ -273,6 +273,7 @@ tbody td{padding:9px 12px;vertical-align:middle}
     </div>
     <div class="nav-tabs" style="margin-left:16px">
       <button class="nav-tab active" onclick="switchView('tenders',this)">Tenders</button>
+      <button class="nav-tab" onclick="switchView('clients',this)">Clients</button>
       <button class="nav-tab" onclick="switchView('audit',this)">Audit Log</button>
     </div>
     <div class="header-right">
@@ -335,6 +336,7 @@ tbody td{padding:9px 12px;vertical-align:middle}
       <div class="stat-card c-blue">
       <div class="stat-val" id="statSubmitted">0</div><div class="stat-lbl">Submitted</div></div>
       <div class="stat-card c-green"><div class="stat-val" id="statWon">0</div><div class="stat-lbl">Won</div></div>
+      <div class="stat-card c-orange"><div class="stat-val" id="statQuotedPipeline" style="font-size:18px">KES 0</div><div class="stat-lbl">Quoted (preparing + submitted)</div></div>
     </div>
 
     <div class="controls">
@@ -389,6 +391,43 @@ tbody td{padding:9px 12px;vertical-align:middle}
     </div>
   </div>
 
+  <!-- CLIENTS VIEW -->
+  <div id="view-clients" class="view">
+    <div class="stats-bar">
+      <div class="stat-card c-blue"><div class="stat-val" id="cTotal">—</div><div class="stat-lbl">Total clients</div></div>
+      <div class="stat-card c-green"><div class="stat-val" id="cActive">—</div><div class="stat-lbl">Active</div></div>
+      <div class="stat-card c-orange"><div class="stat-val" id="cRenewalDue">—</div><div class="stat-lbl">Renewal due ≤30d</div></div>
+      <div class="stat-card c-red"><div class="stat-val" id="cExpired">—</div><div class="stat-lbl">Expired</div></div>
+      <div class="stat-card c-blue"><div class="stat-val" id="cPremiumBook" style="font-size:18px">KES 0</div><div class="stat-lbl">Total premium book</div></div>
+    </div>
+
+    <div class="controls">
+      <div class="search-wrap">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="6.5" cy="6.5" r="5.5" stroke="currentColor" stroke-width="1.5"/><path d="M12 12l2.5 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <input type="text" id="clientSearch" placeholder="Search client name, policy number..." oninput="renderClientsTable()">
+      </div>
+      <select class="filter-select" id="filterClientStatus" onchange="renderClientsTable()">
+        <option value="">All renewal statuses</option>
+        <option value="Active">Active</option>
+        <option value="Renewal Due">Renewal due</option>
+        <option value="Expired">Expired</option>
+      </select>
+      <select class="filter-select" id="filterClientSource" onchange="renderClientsTable()">
+        <option value="">All sources</option>
+        <option value="Won Tender">Won Tender</option>
+        <option value="Manual">Manual</option>
+      </select>
+      <div class="controls-right">
+        <span class="count-badge" id="clientCountBadge"></span>
+        <button class="btn primary" onclick="openAddClientModal()">+ Add client</button>
+      </div>
+    </div>
+
+    <div class="table-wrap" id="clientsTableWrap">
+      <div class="loading-state"><div class="spinner"></div><br><br>Loading clients…</div>
+    </div>
+  </div>
+
   <!-- AUDIT VIEW -->
   <div id="view-audit" class="view">
     <div class="audit-wrap">
@@ -396,7 +435,15 @@ tbody td{padding:9px 12px;vertical-align:middle}
         <h2>Audit log</h2>
         <p>A record of all changes made to tenders — who did what and when.</p>
       </div>
+      <div class="search-wrap" style="margin-bottom:16px;max-width:420px">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="6.5" cy="6.5" r="5.5" stroke="currentColor" stroke-width="1.5"/><path d="M12 12l2.5 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <input type="text" id="auditSearch" placeholder="Search PE name, tender title, person, action..." oninput="renderAuditLog()">
+      </div>
       <div id="auditList"><div class="loading-state"><div class="spinner"></div><br><br>Loading audit log…</div></div>
+      <div style="text-align:center;margin-top:16px">
+        <button class="btn" id="btnLoadMoreAudit" onclick="loadMoreAuditLog()" style="display:none">Load older entries</button>
+        <div id="auditEndMsg" style="font-size:12px;color:var(--text-faint);display:none">— beginning of log —</div>
+      </div>
     </div>
   </div>
 
@@ -429,11 +476,52 @@ tbody td{padding:9px 12px;vertical-align:middle}
         <option>Lost</option><option>Withdrawn</option>
       </select>
     </div>
+    <div class="modal-field"><label>Chance of closing</label>
+      <select id="f_chanceOfClosing">
+        <option value="">— none —</option>
+        <option>Low</option><option>Medium</option><option>High</option>
+      </select>
+    </div>
+    <div class="modal-field"><label>Amount quoted (KES)</label><input type="number" id="f_amountQuoted" placeholder="0" min="0" step="0.01"></div>
+    <div class="modal-field"><label>Underwriter</label><input type="text" id="f_underwriter" placeholder="e.g. Britam"></div>
+    <div class="modal-field"><label>Tender document (link)</label><input type="text" id="f_tenderDocUrl" placeholder="https://drive.google.com/…"></div>
     <div class="modal-field"><label>Notes</label><textarea id="f_notes" placeholder="Any additional notes…"></textarea></div>
     <div class="modal-actions">
       <button class="btn" onclick="closeModal()">Cancel</button>
       <button class="btn danger" id="btnDelete" style="display:none" onclick="deleteFromModal()">Delete</button>
       <button class="btn primary" id="btnSave" onclick="saveModal()">Save tender</button>
+    </div>
+  </div>
+</div>
+
+<!-- CLIENT MODAL -->
+<div class="modal-overlay" id="clientModal" onclick="if(event.target===this)closeClientModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="clientModalTitle">Add client</div>
+      <div class="modal-sub" id="clientModalSub">Fill in the details to track this client.</div>
+    </div>
+    <div class="modal-field"><label>Client name</label><input type="text" id="c_clientName" placeholder="e.g. Kenya Power"></div>
+    <div class="modal-field"><label>Source</label>
+      <select id="c_source">
+        <option>Manual</option>
+        <option>Won Tender</option>
+      </select>
+    </div>
+    <div class="modal-field"><label>Policy type</label><input type="text" id="c_policyType" placeholder="e.g. Group Life"></div>
+    <div class="modal-field"><label>Underwriter</label><input type="text" id="c_underwriter" placeholder="e.g. Britam"></div>
+    <div class="modal-field"><label>Policy number</label><input type="text" id="c_policyNumber" placeholder="e.g. GL/2026/0042"></div>
+    <div class="modal-field"><label>Cover start date</label><input type="date" id="c_coverStart"></div>
+    <div class="modal-field"><label>Cover expiry date</label><input type="date" id="c_coverExpiry"></div>
+    <div class="modal-field"><label>Premium amount (KES)</label><input type="number" id="c_premiumAmount" placeholder="0" min="0" step="0.01"></div>
+    <div class="modal-field"><label>Contact person</label><input type="text" id="c_contactPerson" placeholder="e.g. Jane Wanjiku"></div>
+    <div class="modal-field"><label>Contact phone</label><input type="text" id="c_contactPhone" placeholder="e.g. 0712345678"></div>
+    <div class="modal-field"><label>Contact email</label><input type="email" id="c_contactEmail" placeholder="e.g. jane@client.co.ke"></div>
+    <div class="modal-field"><label>Notes</label><textarea id="c_notes" placeholder="Any additional notes…"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeClientModal()">Cancel</button>
+      <button class="btn danger" id="btnDeleteClient" style="display:none" onclick="deleteFromClientModal()">Delete</button>
+      <button class="btn primary" id="btnSaveClient" onclick="saveClientModal()">Save client</button>
     </div>
   </div>
 </div>
@@ -454,11 +542,13 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 //  STATE
 // ══════════════════════════════════════════════
 let tenders = [];
+let clients = [];
 let knownUsers = [];
 let currentUser = null;
 let sortField = 'days_left';
 let sortDir = 1;
 let editingId = null;
+let editingClientId = null;
 
 // ══════════════════════════════════════════════
 //  SEED DATA (173 tenders — run once via seedDB())
@@ -482,6 +572,18 @@ function calcDays(endDate) {
         const m = months[parts[1].toLowerCase().slice(0,3)];
         if (m !== undefined) {
           const closing = new Date(+parts[2], m, +parts[0]);
+          closing.setHours(0, 0, 0, 0);
+          return Math.round((closing - today) / 86400000);
+        }
+      }
+      // Fallback: D/M/YYYY or DD/MM/YYYY (e.g. "31/9/2026")
+      const slashParts = endDate.trim().split('/');
+      if (slashParts.length === 3) {
+        const day = +slashParts[0], month = +slashParts[1] - 1, year = +slashParts[2];
+        const closing = new Date(year, month, day);
+        // Reject invalid calendar dates (e.g. "31/9/2026" — September has 30 days)
+        // rather than silently rolling over into October.
+        if (closing.getMonth() === month && closing.getDate() === day) {
           closing.setHours(0, 0, 0, 0);
           return Math.round((closing - today) / 86400000);
         }
@@ -585,7 +687,26 @@ async function loadTenders() {
   const { data, error } = await sb.from('tenders').select('*').order('days_left', { ascending: true });
   if (error) { toast('Error loading tenders', 'error'); return; }
   tenders = data || [];
+
+  // days_left is stored, not computed live, so it drifts by one each day
+  // it isn't touched. Recalculate it fresh on every load so the UI is
+  // always correct "today" — no one has to remember to click Refresh days.
+  const drifted = [];
+  tenders = tenders.map(t => {
+    const fresh = calcDays(t.end_date);
+    if (fresh !== t.days_left) drifted.push({ id: t.id, days_left: fresh });
+    return { ...t, days_left: fresh };
+  });
+
   renderTable();
+
+  // Sync corrected values back to the DB quietly, after the UI is already
+  // showing the right numbers — failure here shouldn't block the page.
+  if (drifted.length) {
+    for (const u of drifted) {
+      await sb.from('tenders').update({ days_left: u.days_left }).eq('id', u.id);
+    }
+  }
 }
 
 async function insertTender(t) {
@@ -613,6 +734,238 @@ async function deleteTender(id) {
   if (error) { toast('Error deleting tender', 'error'); return false; }
   await logAudit('deleted', old, old, null);
   return true;
+}
+
+// ══════════════════════════════════════════════
+//  CLIENTS
+// ══════════════════════════════════════════════
+async function loadClients() {
+  const wrap = document.getElementById('clientsTableWrap');
+  wrap.innerHTML = '<div class="loading-state"><div class="spinner"></div><br><br>Loading clients…</div>';
+  const { data, error } = await sb.from('clients').select('*').order('cover_expiry', { ascending: true });
+  if (error) { wrap.innerHTML = '<div style="text-align:center;padding:60px 20px;color:var(--text-muted)">Could not load clients.</div>'; return; }
+  clients = data || [];
+  renderClientsTable();
+}
+
+// Status is derived purely from cover_expiry — no manual updating required.
+function clientStatus(c) {
+  if (!c.cover_expiry) return 'Active';
+  const today = new Date(); today.setHours(0,0,0,0);
+  const expiry = new Date(c.cover_expiry);
+  const daysLeft = Math.round((expiry - today) / 86400000);
+  if (daysLeft < 0) return 'Expired';
+  if (daysLeft <= 30) return 'Renewal Due';
+  return 'Active';
+}
+
+function clientStatusClass(status) {
+  if (status === 'Active') return 'ok';
+  if (status === 'Renewal Due') return 'soon';
+  return 'expired';
+}
+
+function getFilteredClients() {
+  const q = (document.getElementById('clientSearch')?.value || '').toLowerCase().trim();
+  const statusFilter = document.getElementById('filterClientStatus')?.value || '';
+  const sourceFilter = document.getElementById('filterClientSource')?.value || '';
+  return clients.filter(c => {
+    if (q && !(`${c.client_name} ${c.policy_number} ${c.contact_person}`.toLowerCase().includes(q))) return false;
+    if (statusFilter && clientStatus(c) !== statusFilter) return false;
+    if (sourceFilter && c.source !== sourceFilter) return false;
+    return true;
+  });
+}
+
+function updateClientStats(rows) {
+  const total = clients.length;
+  const active = clients.filter(c => clientStatus(c) === 'Active').length;
+  const renewalDue = clients.filter(c => clientStatus(c) === 'Renewal Due').length;
+  const expired = clients.filter(c => clientStatus(c) === 'Expired').length;
+  const premiumBook = clients.reduce((sum, c) => sum + (parseFloat(c.premium_amount) || 0), 0);
+  document.getElementById('cTotal').textContent = total;
+  document.getElementById('cActive').textContent = active;
+  document.getElementById('cRenewalDue').textContent = renewalDue;
+  document.getElementById('cExpired').textContent = expired;
+  document.getElementById('cPremiumBook').textContent = 'KES ' + premiumBook.toLocaleString('en-KE', { maximumFractionDigits: 0 });
+}
+
+function renderClientsTable() {
+  const rows = getFilteredClients();
+  updateClientStats(rows);
+  document.getElementById('clientCountBadge').textContent = rows.length + ' of ' + clients.length;
+  const wrap = document.getElementById('clientsTableWrap');
+  if (!rows.length) {
+    wrap.innerHTML = '<div style="text-align:center;padding:60px 20px;color:var(--text-muted)">No clients match the current filters.</div>';
+    return;
+  }
+  wrap.innerHTML = `<table id="clientsTable">
+    <thead><tr>
+      <th class="td-num">#</th>
+      <th>Client name</th>
+      <th>Source</th>
+      <th>Policy type</th>
+      <th>Underwriter</th>
+      <th>Policy number</th>
+      <th>Cover start</th>
+      <th>Cover expiry</th>
+      <th>Premium (KES)</th>
+      <th>Status</th>
+      <th>Contact</th>
+      <th class="td-actions"></th>
+    </tr></thead>
+    <tbody id="clientsTbody"></tbody>
+  </table>`;
+  const tbody = document.getElementById('clientsTbody');
+  rows.forEach((c, i) => {
+    const status = clientStatus(c);
+    const statusCls = clientStatusClass(status);
+    const tr = document.createElement('tr');
+    if (statusCls === 'expired') tr.className = 'row-expired';
+    tr.innerHTML = `
+      <td class="td-num">${i+1}</td>
+      <td><div class="pe-name" title="${esc(c.client_name)}">${esc(c.client_name)}</div></td>
+      <td><span class="badge cat">${esc(c.source||'Manual')}</span></td>
+      <td>${esc(c.policy_type||'—')}</td>
+      <td>${esc(c.underwriter||'—')}</td>
+      <td style="font-size:12px;color:var(--text-muted)">${esc(c.policy_number||'—')}</td>
+      <td style="white-space:nowrap;font-size:12px;color:var(--text-muted)">${c.cover_start ? new Date(c.cover_start).toLocaleDateString('en-KE',{day:'2-digit',month:'short',year:'numeric'}) : '—'}</td>
+      <td style="white-space:nowrap;font-size:12px;color:var(--text-muted)">${c.cover_expiry ? new Date(c.cover_expiry).toLocaleDateString('en-KE',{day:'2-digit',month:'short',year:'numeric'}) : '—'}</td>
+      <td style="text-align:right">${(parseFloat(c.premium_amount)||0).toLocaleString('en-KE',{maximumFractionDigits:0})}</td>
+      <td><span class="badge ${statusCls}">${status}</span></td>
+      <td style="font-size:12px;color:var(--text-muted)">${esc(c.contact_person||'—')}${c.contact_phone ? '<br>'+esc(c.contact_phone) : ''}</td>
+      <td class="td-actions"><button class="btn" style="padding:4px 8px;font-size:11px" onclick="openEditClientModal('${c.id}')">✎</button></td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+async function insertClient(c) {
+  const { data, error } = await sb.from('clients').insert([c]).select().single();
+  if (error) { toast(`Error saving client: ${error.message}`, 'error'); return null; }
+  return data;
+}
+
+async function updateClient(id, changes) {
+  const { data, error } = await sb.from('clients').update(changes).eq('id', id).select().single();
+  if (error) { toast(`Error updating client: ${error.message}`, 'error'); return null; }
+  return data;
+}
+
+async function deleteClient(id) {
+  const { error } = await sb.from('clients').delete().eq('id', id);
+  if (error) { toast('Error deleting client', 'error'); return false; }
+  return true;
+}
+
+function openAddClientModal(prefill) {
+  editingClientId = null;
+  document.getElementById('clientModalTitle').textContent = 'Add client';
+  document.getElementById('clientModalSub').textContent = 'Fill in the details to track this client.';
+  ['c_clientName','c_policyType','c_underwriter','c_policyNumber','c_coverStart','c_coverExpiry','c_contactPerson','c_contactPhone','c_contactEmail','c_notes'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('c_premiumAmount').value = '';
+  document.getElementById('c_source').value = prefill?.source || 'Manual';
+  if (prefill) {
+    document.getElementById('c_clientName').value = prefill.client_name || '';
+    document.getElementById('c_policyType').value = prefill.policy_type || '';
+    document.getElementById('c_underwriter').value = prefill.underwriter || '';
+    document.getElementById('c_premiumAmount').value = prefill.premium_amount || '';
+  }
+  document.getElementById('btnDeleteClient').style.display = 'none';
+  document.getElementById('btnSaveClient').textContent = 'Add client';
+  document.getElementById('clientModal').classList.add('open');
+  // Stash any linked tender id for saveClientModal to pick up
+  document.getElementById('clientModal').dataset.linkedTenderId = prefill?.linked_tender_id || '';
+}
+
+function openEditClientModal(id) {
+  const c = clients.find(x => x.id === id);
+  if (!c) return;
+  editingClientId = id;
+  document.getElementById('clientModalTitle').textContent = 'Edit client';
+  document.getElementById('clientModalSub').textContent = c.client_name;
+  document.getElementById('c_clientName').value = c.client_name || '';
+  document.getElementById('c_source').value = c.source || 'Manual';
+  document.getElementById('c_policyType').value = c.policy_type || '';
+  document.getElementById('c_underwriter').value = c.underwriter || '';
+  document.getElementById('c_policyNumber').value = c.policy_number || '';
+  document.getElementById('c_coverStart').value = c.cover_start || '';
+  document.getElementById('c_coverExpiry').value = c.cover_expiry || '';
+  document.getElementById('c_premiumAmount').value = c.premium_amount || '';
+  document.getElementById('c_contactPerson').value = c.contact_person || '';
+  document.getElementById('c_contactPhone').value = c.contact_phone || '';
+  document.getElementById('c_contactEmail').value = c.contact_email || '';
+  document.getElementById('c_notes').value = c.notes || '';
+  document.getElementById('btnDeleteClient').style.display = 'inline-flex';
+  document.getElementById('btnSaveClient').textContent = 'Save changes';
+  document.getElementById('clientModal').classList.add('open');
+}
+
+// Pre-fills a new client record from a Won tender's data.
+// Tender and client stay fully independent after creation —
+// editing or deleting either one never affects the other.
+function convertTenderToClient(tenderId) {
+  const t = tenders.find(x => x.id === tenderId);
+  if (!t) return;
+  openAddClientModal({
+    client_name: t.pe_name,
+    source: 'Won Tender',
+    policy_type: t.category || '',
+    underwriter: t.underwriter || '',
+    premium_amount: t.amount_quoted || 0,
+    linked_tender_id: t.id
+  });
+  switchView('clients', document.querySelector('.nav-tab[onclick*="clients"]'));
+}
+
+function closeClientModal() {
+  document.getElementById('clientModal').classList.remove('open');
+  document.getElementById('clientModal').dataset.linkedTenderId = '';
+  editingClientId = null;
+}
+
+async function saveClientModal() {
+  const client_name = document.getElementById('c_clientName').value.trim();
+  if (!client_name) { alert('Client name is required.'); return; }
+  const btn = document.getElementById('btnSaveClient');
+  btn.disabled = true;
+  const fields = {
+    client_name,
+    source: document.getElementById('c_source').value,
+    policy_type: document.getElementById('c_policyType').value.trim(),
+    underwriter: document.getElementById('c_underwriter').value.trim(),
+    policy_number: document.getElementById('c_policyNumber').value.trim(),
+    cover_start: document.getElementById('c_coverStart').value || null,
+    cover_expiry: document.getElementById('c_coverExpiry').value || null,
+    premium_amount: parseFloat(document.getElementById('c_premiumAmount').value) || 0,
+    contact_person: document.getElementById('c_contactPerson').value.trim(),
+    contact_phone: document.getElementById('c_contactPhone').value.trim(),
+    contact_email: document.getElementById('c_contactEmail').value.trim(),
+    notes: document.getElementById('c_notes').value.trim()
+  };
+  if (editingClientId) {
+    const updated = await updateClient(editingClientId, fields);
+    if (updated) { const idx = clients.findIndex(c => c.id === editingClientId); if (idx !== -1) clients[idx] = updated; toast('Client updated', 'success'); }
+  } else {
+    const linkedTenderId = document.getElementById('clientModal').dataset.linkedTenderId || null;
+    if (linkedTenderId) fields.linked_tender_id = linkedTenderId;
+    const added = await insertClient(fields);
+    if (added) { clients.unshift(added); toast('Client added', 'success'); }
+  }
+  btn.disabled = false;
+  renderClientsTable();
+  closeClientModal();
+}
+
+async function deleteFromClientModal() {
+  if (!editingClientId) return;
+  if (!confirm('Delete this client? This cannot be undone.')) return;
+  const ok = await deleteClient(editingClientId);
+  if (ok) {
+    clients = clients.filter(c => c.id !== editingClientId);
+    toast('Client deleted');
+    renderClientsTable();
+    closeClientModal();
+  }
 }
 
 // ══════════════════════════════════════════════
@@ -651,14 +1004,63 @@ async function logAudit(action, tender, oldData, newData) {
   }]);
 }
 
+// ══════════════════════════════════════════════
+//  AUDIT LOG
+// ══════════════════════════════════════════════
+let auditEntries = [];
+const AUDIT_PAGE_SIZE = 100;
+
 async function loadAuditLog() {
+  auditEntries = [];
   const list = document.getElementById('auditList');
   list.innerHTML = '<div class="loading-state"><div class="spinner"></div><br><br>Loading…</div>';
-  const { data, error } = await sb.from('audit_log').select('*').order('created_at', { ascending: false }).limit(100);
+  document.getElementById('btnLoadMoreAudit').style.display = 'none';
+  document.getElementById('auditEndMsg').style.display = 'none';
+  const { data, error } = await sb.from('audit_log').select('*').order('created_at', { ascending: false }).range(0, AUDIT_PAGE_SIZE - 1);
   if (error) { list.innerHTML = '<div class="audit-empty"><div class="audit-empty-icon">⚠️</div>Could not load audit log.</div>'; return; }
-  if (!data || !data.length) { list.innerHTML = '<div class="audit-empty"><div class="audit-empty-icon">📋</div><strong>No activity yet</strong><br><br>Changes to tenders will appear here.</div>'; return; }
+  auditEntries = data || [];
+  if (data && data.length === AUDIT_PAGE_SIZE) document.getElementById('btnLoadMoreAudit').style.display = 'inline-flex';
+  else document.getElementById('auditEndMsg').style.display = 'block';
+  renderAuditLog();
+}
+
+// Fetches the next page of older entries and appends them — nothing is
+// ever deleted from audit_log, this just lets you reach further back
+// than the most recent 100 without loading everything at once.
+async function loadMoreAuditLog() {
+  const btn = document.getElementById('btnLoadMoreAudit');
+  btn.disabled = true;
+  btn.textContent = 'Loading…';
+  const from = auditEntries.length;
+  const to = from + AUDIT_PAGE_SIZE - 1;
+  const { data, error } = await sb.from('audit_log').select('*').order('created_at', { ascending: false }).range(from, to);
+  btn.disabled = false;
+  btn.textContent = 'Load older entries';
+  if (error) { toast('Error loading older entries', 'error'); return; }
+  auditEntries = auditEntries.concat(data || []);
+  if (!data || data.length < AUDIT_PAGE_SIZE) {
+    btn.style.display = 'none';
+    document.getElementById('auditEndMsg').style.display = 'block';
+  }
+  renderAuditLog();
+}
+
+function renderAuditLog() {
+  const list = document.getElementById('auditList');
+  const q = (document.getElementById('auditSearch')?.value || '').toLowerCase().trim();
+  const filtered = q ? auditEntries.filter(entry => {
+    const haystack = `${entry.tender_pe_name||''} ${entry.tender_title||''} ${entry.user_name||''} ${entry.action||''}`.toLowerCase();
+    return haystack.includes(q);
+  }) : auditEntries;
+
+  if (!filtered.length) {
+    list.innerHTML = q
+      ? '<div class="audit-empty"><div class="audit-empty-icon">🔍</div><strong>No matches</strong><br><br>No loaded entries match your search. Older entries further back may still match — try "Load older entries" first.</div>'
+      : '<div class="audit-empty"><div class="audit-empty-icon">📋</div><strong>No activity yet</strong><br><br>Changes to tenders will appear here.</div>';
+    return;
+  }
   const icons = { created: '＋', updated: '✎', deleted: '✕' };
-  list.innerHTML = data.map(entry => {
+  list.innerHTML = filtered.map(entry => {
     const dt = new Date(entry.created_at).toLocaleString('en-KE', {dateStyle:'medium', timeStyle:'short'});
     const changes = entry.changes || {};
     const changeRows = Object.entries(changes).map(([field, val]) => `
@@ -693,6 +1095,7 @@ function switchView(name, tab) {
   document.getElementById('view-'+name).classList.add('active');
   tab.classList.add('active');
   if (name === 'audit') loadAuditLog();
+  if (name === 'clients') loadClients();
 }
 
 // ══════════════════════════════════════════════
@@ -706,6 +1109,13 @@ function updateStats(rows) {
   document.getElementById('sTotal').textContent = rows.filter(t => t.days_left >= 0).length;
   document.getElementById('statSubmitted').textContent = tenders.filter(t => t.ad_status?.toLowerCase() === 'submitted').length;
   document.getElementById('statWon').textContent = tenders.filter(t => t.ad_status?.toLowerCase() === 'won').length;
+
+  // Pipeline value: sum of amount_quoted for tenders currently Preparing or Submitted
+  // (excludes Won/Lost/Withdrawn so it reflects live, undecided pipeline only)
+  const pipelineTotal = tenders
+    .filter(t => ['preparing', 'submitted'].includes(t.ad_status?.toLowerCase()))
+    .reduce((sum, t) => sum + (parseFloat(t.amount_quoted) || 0), 0);
+  document.getElementById('statQuotedPipeline').textContent = 'KES ' + pipelineTotal.toLocaleString('en-KE', { maximumFractionDigits: 0 });
   
   // For assigned count: admins see all assigned, users see only their own
   let assignedCount = 0;
@@ -815,6 +1225,10 @@ function renderTable() {
       <th>Marketer</th>
       <th>Proposed by</th>
       <th>Bid status</th>
+      <th>Chance of closing</th>
+      <th class="sortable" onclick="sortBy('amount_quoted')">Amount quoted <span id="sort_amount_quoted">${sortField==='amount_quoted'?sortDir===1?'▲':'▼':''}</span></th>
+      <th>Underwriter</th>
+      <th>Document</th>
       <th>Notes</th>
       <th class="td-actions"></th>
     </tr></thead>
@@ -847,8 +1261,22 @@ function renderTable() {
           ${['Watch','Identified','Qualified','Preparing','Submitted','Won','Lost','Withdrawn'].map(s=>`<option${t.ad_status===s?' selected':''}>${s}</option>`).join('')}
         </select>
       </td>
+      <td class="edit-cell">
+        <select data-id="${t.id}" data-field="chance_of_closing" onchange="inlineUpdate(this)">
+          <option value="">—</option>
+          ${['Low','Medium','High'].map(s=>`<option${t.chance_of_closing===s?' selected':''}>${s}</option>`).join('')}
+        </select>
+      </td>
+      <td class="edit-cell"><input class="notes-input" type="number" min="0" step="0.01" style="text-align:right" value="${t.amount_quoted||0}" placeholder="0" data-id="${t.id}" data-field="amount_quoted" onblur="inlineUpdate(this)"></td>
+      <td class="edit-cell"><input class="notes-input" type="text" value="${esc(t.underwriter||'')}" placeholder="Underwriter…" data-id="${t.id}" data-field="underwriter" onblur="inlineUpdate(this)"></td>
+      <td class="edit-cell">${t.tender_document_url
+        ? `<div style="display:flex;align-items:center;gap:4px"><a href="${esc(t.tender_document_url)}" target="_blank" rel="noopener" class="btn" style="padding:3px 8px;font-size:11px">Open 📎</a><button class="btn" style="padding:3px 6px;font-size:11px" title="Change link" onclick="editDocLink('${t.id}')">✎</button></div>`
+        : `<input class="notes-input" type="text" value="" placeholder="Paste link…" data-id="${t.id}" data-field="tender_document_url" onblur="inlineUpdate(this)">`}</td>
       <td><input class="notes-input" type="text" value="${esc(t.notes||'')}" placeholder="Add note…" data-id="${t.id}" data-field="notes" onblur="inlineUpdate(this)"></td>
-      <td class="td-actions"><button class="btn" style="padding:4px 8px;font-size:11px" onclick="openEditModal('${t.id}')">✎</button></td>`;
+      <td class="td-actions" style="white-space:nowrap">
+        ${t.ad_status?.trim().toLowerCase() === 'won' ? `<button class="btn primary" style="padding:4px 8px;font-size:11px;margin-right:4px" title="Create client from this won tender" onclick="convertTenderToClient('${t.id}')">→ Client</button>` : ''}
+        <button class="btn" style="padding:4px 8px;font-size:11px" onclick="openEditModal('${t.id}')">✎</button>
+      </td>`;
     tbody.appendChild(tr);
   });
 }
@@ -856,7 +1284,8 @@ function renderTable() {
 async function inlineUpdate(el) {
   const id = el.dataset.id;
   const field = el.dataset.field;
-  const val = el.value;
+  const numericFields = ['amount_quoted'];
+  const val = numericFields.includes(field) ? (parseFloat(el.value) || 0) : el.value;
   const old = tenders.find(t => t.id === id);
   if (!old || old[field] === val) return;
   const updated = await updateTender(id, { [field]: val }, old);
@@ -865,6 +1294,24 @@ async function inlineUpdate(el) {
     if (idx !== -1) tenders[idx] = { ...tenders[idx], [field]: val };
     document.getElementById('lastSaved').textContent = 'Saved ' + tsNow();
     toast('Saved', 'success');
+    renderTable();
+  }
+}
+
+async function editDocLink(id) {
+  const old = tenders.find(t => t.id === id);
+  if (!old) return;
+  const val = prompt('Tender document link:', old.tender_document_url || '');
+  if (val === null) return; // cancelled
+  const trimmed = val.trim();
+  if (trimmed === (old.tender_document_url || '')) return;
+  const updated = await updateTender(id, { tender_document_url: trimmed }, old);
+  if (updated) {
+    const idx = tenders.findIndex(t => t.id === id);
+    if (idx !== -1) tenders[idx] = { ...tenders[idx], tender_document_url: trimmed };
+    document.getElementById('lastSaved').textContent = 'Saved ' + tsNow();
+    toast('Saved', 'success');
+    renderTable();
   }
 }
 
@@ -875,9 +1322,10 @@ function openAddModal() {
   editingId = null;
   document.getElementById('modalTitle').textContent = 'Add new tender';
   document.getElementById('modalSub').textContent = 'Fill in the details to track a new tender.';
-  ['f_peName','f_title','f_endDate','f_notes','f_proposedBy'].forEach(id => document.getElementById(id).value = '');
+  ['f_peName','f_title','f_endDate','f_notes','f_proposedBy','f_amountQuoted','f_underwriter','f_tenderDocUrl'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('f_category').value = 'Medical/Health';
   document.getElementById('f_adStatus').value = '';
+  document.getElementById('f_chanceOfClosing').value = '';
   const mktSel = document.getElementById('f_marketer');
   mktSel.innerHTML = buildMarketerOptions('');
   mktSel.value = '';
@@ -900,6 +1348,10 @@ function openEditModal(id) {
   mktSel.innerHTML = buildMarketerOptions(t.marketer || '');
   mktSel.value = t.marketer || '';
   document.getElementById('f_adStatus').value = t.ad_status || '';
+  document.getElementById('f_chanceOfClosing').value = t.chance_of_closing || '';
+  document.getElementById('f_amountQuoted').value = t.amount_quoted || '';
+  document.getElementById('f_underwriter').value = t.underwriter || '';
+  document.getElementById('f_tenderDocUrl').value = t.tender_document_url || '';
   document.getElementById('f_notes').value = t.notes || '';
   document.getElementById('f_proposedBy').value = t.proposed_by || '';
   document.getElementById('btnDelete').style.display = 'inline-flex';
@@ -927,6 +1379,10 @@ async function saveModal() {
       marketer: document.getElementById('f_marketer').value.trim(),
       proposed_by: document.getElementById('f_proposedBy').value.trim(),
       ad_status: document.getElementById('f_adStatus').value,
+      chance_of_closing: document.getElementById('f_chanceOfClosing').value,
+      amount_quoted: parseFloat(document.getElementById('f_amountQuoted').value) || 0,
+      underwriter: document.getElementById('f_underwriter').value.trim(),
+      tender_document_url: document.getElementById('f_tenderDocUrl').value.trim(),
       notes: document.getElementById('f_notes').value.trim() };
     const updated = await updateTender(editingId, changes, old);
     if (updated) { const idx = tenders.findIndex(t => t.id === editingId); if (idx !== -1) tenders[idx] = updated; toast('Tender updated', 'success'); }
@@ -936,6 +1392,10 @@ async function saveModal() {
       marketer: document.getElementById('f_marketer').value.trim(),
       proposed_by: document.getElementById('f_proposedBy').value.trim(),
       ad_status: document.getElementById('f_adStatus').value,
+      chance_of_closing: document.getElementById('f_chanceOfClosing').value,
+      amount_quoted: parseFloat(document.getElementById('f_amountQuoted').value) || 0,
+      underwriter: document.getElementById('f_underwriter').value.trim(),
+      tender_document_url: document.getElementById('f_tenderDocUrl').value.trim(),
       notes: document.getElementById('f_notes').value.trim() };
     const added = await insertTender(rec);
     if (added) { tenders.unshift(added); toast('Tender added', 'success'); }
