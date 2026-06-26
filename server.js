@@ -30,7 +30,9 @@ app.use(cors({
       'http://localhost:3000',
       'http://127.0.0.1:3000',
       'http://188.166.28.156',
-      'https://imothtender-production.up.railway.app'
+      'https://188.166.28.156',
+      'https://imothtender-production.up.railway.app',
+      'https://imothtender101.vercel.app'
     ];
     
     if (!origin || allowedOrigins.includes(origin)) {
@@ -42,13 +44,13 @@ app.use(cors({
   credentials: true
 }));
 
-// Serve static files (frontend HTML and assets)
-app.use(express.static(__dirname));
-
 // Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
+
+// Serve static files (frontend HTML and assets)
+app.use(express.static(__dirname));
 
 // ══════════════════════════════════════════════════════
 //  SIGNUP ENDPOINT
