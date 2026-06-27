@@ -660,6 +660,19 @@ async function doLogout() {
 // ══════════════════════════════════════════════
 //  APP INIT
 // ══════════════════════════════════════════════
+// Only these people can see/use the Clients section.
+// Frontend-only restriction — hides the tab and blocks the view,
+// but does not enforce at the database level.
+const CLIENTS_ACCESS_WHITELIST = [
+  'support@imoth.co.ke',
+  'walter@imoth.co.ke',
+  'fouryouex@outlook.com'
+];
+
+function hasClientsAccess() {
+  return currentUser && CLIENTS_ACCESS_WHITELIST.includes((currentUser.email || '').toLowerCase());
+}
+
 async function initApp() {
   document.getElementById('loginScreen').classList.remove('show');
   document.getElementById('app').style.display = 'block';
@@ -675,6 +688,10 @@ async function initApp() {
   document.getElementById('userRoleLbl').textContent = role === 'admin' ? 'Administrator' : 'Marketer';
   if (role === 'admin') {
     document.getElementById('adminBar').classList.add('show');
+  }
+  if (!hasClientsAccess()) {
+    const clientsTab = document.querySelector('.nav-tab[onclick*="\'clients\'"]');
+    if (clientsTab) clientsTab.remove();
   }
   await loadTenders();
   await loadProfiles();
@@ -905,6 +922,7 @@ function openEditClientModal(id) {
 // Tender and client stay fully independent after creation —
 // editing or deleting either one never affects the other.
 function convertTenderToClient(tenderId) {
+  if (!hasClientsAccess()) { toast("You don't have access to Clients", 'error'); return; }
   const t = tenders.find(x => x.id === tenderId);
   if (!t) return;
   openAddClientModal({
@@ -1091,6 +1109,10 @@ function renderAuditLog() {
 //  VIEW SWITCHING
 // ══════════════════════════════════════════════
 function switchView(name, tab) {
+  if (name === 'clients' && !hasClientsAccess()) {
+    toast("You don't have access to Clients", 'error');
+    return;
+  }
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
   document.getElementById('view-'+name).classList.add('active');
@@ -1275,7 +1297,7 @@ function renderTable() {
         : `<input class="notes-input" type="text" value="" placeholder="Paste link…" data-id="${t.id}" data-field="tender_document_url" onblur="inlineUpdate(this)">`}</td>
       <td><input class="notes-input" type="text" value="${esc(t.notes||'')}" placeholder="Add note…" data-id="${t.id}" data-field="notes" onblur="inlineUpdate(this)"></td>
       <td class="td-actions" style="white-space:nowrap">
-        ${t.ad_status?.trim().toLowerCase() === 'won' ? `<button class="btn primary" style="padding:4px 8px;font-size:11px;margin-right:4px" title="Create client from this won tender" onclick="convertTenderToClient('${t.id}')">→ Client</button>` : ''}
+        ${t.ad_status?.trim().toLowerCase() === 'won' && hasClientsAccess() ? `<button class="btn primary" style="padding:4px 8px;font-size:11px;margin-right:4px" title="Create client from this won tender" onclick="convertTenderToClient('${t.id}')">→ Client</button>` : ''}
         <button class="btn" style="padding:4px 8px;font-size:11px" onclick="openEditModal('${t.id}')">✎</button>
       </td>`;
     tbody.appendChild(tr);
